@@ -1,0 +1,56 @@
+export type UserRole = 'senior' | 'helper' | 'owner';
+export type RequestStatus = 'open' | 'answered' | 'closed';
+export type ResponseType = 'video' | 'text' | 'video_call';
+export type Language = 'english' | 'hindi' | 'tamil' | 'telugu' | 'kannada' | 'malayalam' | 'marathi' | 'bengali';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  phone?: string;
+  language_preference: Language;
+  college_domain?: string;
+  college_name?: string;
+  is_email_verified: boolean;
+  is_kyc_verified: boolean;
+  profile_picture_url?: string;
+  created_at: string;
+}
+
+export interface Request {
+  id: string;
+  senior_id: string;
+  title: string;
+  description: string;
+  audio_url?: string;
+  language: Language;
+  category: string;
+  status: RequestStatus;
+  created_at: string;
+  senior?: User;
+  responses?: Response[];
+}
+
+export interface Response {
+  id: string;
+  request_id: string;
+  helper_id: string;
+  video_url?: string;
+  text_content?: string;
+  response_type: ResponseType;
+  is_approved: boolean;
+  is_rejected: boolean;
+  rejection_reason?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  is_kyc_response: boolean;
+  created_at: string;
+  helper?: User;
+  request?: Request;
+}
+
+export interface Session {
+  user: User;
+  session_token: string;
+}
