@@ -27,6 +27,7 @@ export interface Request {
   language: Language;
   category: string;
   status: RequestStatus;
+  expires_at?: string;
   created_at: string;
   senior?: User;
   responses?: Response[];
@@ -38,9 +39,11 @@ export interface Response {
   helper_id: string;
   video_url?: string;
   text_content?: string;
+  call_url?: string;
   response_type: ResponseType;
   is_approved: boolean;
   is_rejected: boolean;
+  accepted_by_senior: boolean;
   rejection_reason?: string;
   reviewed_by?: string;
   reviewed_at?: string;

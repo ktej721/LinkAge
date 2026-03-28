@@ -28,34 +28,24 @@ export default async function HelperDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Welcome & KYC Status */}
+      {/* Welcome */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome, {user.name}!</h1>
           <p className="text-gray-500 mt-1">{user.college_name || 'Student Helper'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {user.is_kyc_verified ? (
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1.5 text-sm flex gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Verified Student
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 px-3 py-1.5 text-sm flex gap-1.5">
-              <ShieldAlert className="w-4 h-4" /> Unverified
-            </Badge>
-          )}
-        </div>
+        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 px-3 py-1.5 text-sm flex gap-1.5">
+          <ShieldCheck className="w-4 h-4" /> Student Volunteer
+        </Badge>
       </div>
 
       {/* Info Card */}
-      <div className={`p-5 rounded-2xl border ${user.is_kyc_verified ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
-        <h3 className={`font-semibold mb-2 ${user.is_kyc_verified ? 'text-emerald-800' : 'text-blue-800'}`}>
-          {user.is_kyc_verified ? 'You have full access 🚀' : 'How it works for new helpers'}
+      <div className="p-5 rounded-2xl border bg-blue-50 border-blue-100">
+        <h3 className="font-semibold mb-2 text-blue-800">
+          How it works
         </h3>
-        <p className={user.is_kyc_verified ? 'text-emerald-700' : 'text-blue-700'}>
-          {user.is_kyc_verified 
-            ? 'As a verified student, you can submit both video and written responses that go live immediately to help seniors.' 
-            : 'You can browse questions and submit video responses. Our moderation team will review your videos before they are shown to seniors. Complete your profile verification to unlock instant text responses.'}
+        <p className="text-blue-700">
+          Browse questions from seniors and submit your answers. Text answers go live immediately. Video answers are reviewed by our moderation team before being shown to seniors.
         </p>
       </div>
 

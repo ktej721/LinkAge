@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { isCollegeEmail, getCollegeName } from '@/lib/college-domains';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'senior';
@@ -204,7 +204,7 @@ export default function LoginPage() {
                  <Label htmlFor="language">Preferred Language</Label>
                  <Select 
                    value={formData.language_preference} 
-                   onValueChange={(val) => setFormData({...formData, language_preference: val})}
+                   onValueChange={(val) => setFormData({...formData, language_preference: val || 'english'})}
                  >
                    <SelectTrigger className="text-base py-6">
                      <SelectValue placeholder="Select Language" />
@@ -234,5 +234,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

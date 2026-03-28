@@ -65,12 +65,12 @@ export default function BrowseRequestsPage() {
             placeholder="Search keywords..." 
             className="pl-9"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           />
         </div>
         
         <div className="flex gap-4">
-          <Select value={language} onValueChange={setLanguage}>
+          <Select value={language} onValueChange={(val) => setLanguage(val || 'all')}>
             <SelectTrigger className="w-[140px] capitalize">
               <SelectValue placeholder="Language" />
             </SelectTrigger>
@@ -87,7 +87,7 @@ export default function BrowseRequestsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={category} onValueChange={setCategory}>
+          <Select value={category} onValueChange={(val) => setCategory(val || 'all')}>
             <SelectTrigger className="w-[160px] capitalize">
               <SelectValue placeholder="Category" />
             </SelectTrigger>

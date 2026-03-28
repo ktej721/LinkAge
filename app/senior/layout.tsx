@@ -1,12 +1,26 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import NavBar from '@/components/NavBar';
+import CallNotification from '@/components/CallNotification';
+import { supabaseAdmin } from '@/lib/supabase-server';
 
 export default async function SeniorLayout({ children }: { children: React.ReactNode }) {
   const user = await getSession();
 
   if (!user || user.role !== 'senior') {
     redirect('/login?role=senior');
+  }
+
+  // Fetch all request IDs for this senior so we can listen for incoming calls
+  let requestIds: string[] = [];
+  try {
+    const { data: requests } = await supabaseAdmin
+      .from('requests')
+      .select('id')
+      .eq('senior_id', user.id);
+    requestIds = (requests || []).map((r: any) => r.id);
+  } catch (err) {
+    console.error('Failed to fetch request IDs for call notification:', err);
   }
 
   const navItems = [
@@ -17,6 +31,7 @@ export default async function SeniorLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 text-lg">
+      <CallNotification seniorId={user.id} requestIds={requestIds} />
       <NavBar user={user} navItems={navItems} />
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {children}

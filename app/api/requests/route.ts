@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     .select(`
       *,
       senior:users!requests_senior_id_fkey(id, name, language_preference),
-      responses(id, is_approved, response_type)
+      responses(id, is_approved, response_type, call_url)
     `)
     .order('created_at', { ascending: false });
 
@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Title and description are required.' }, { status: 400 });
   }
 
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const { data, error } = await supabaseAdmin.from('requests').insert({
     senior_id: user.id,
     title,
@@ -57,6 +59,7 @@ export async function POST(req: NextRequest) {
     language: language || user.language_preference,
     category: category || 'general',
     status: 'open',
+    expires_at: expiresAt,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

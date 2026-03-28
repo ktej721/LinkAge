@@ -5,8 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle, XCircle, User, Loader2, ShieldCheck } from 'lucide-react';
-import { getSignedVideoUrl } from '@/lib/get-signed-url';
+import { CheckCircle, XCircle, User, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 export default function ReviewPage() {
   const [reviews, setReviews] = useState<any[]>([]);
@@ -26,28 +25,9 @@ export default function ReviewPage() {
       const res = await fetch('/api/admin/review');
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      
-      // Need to fetch signed URLs for each video
-      const enhanced = await Promise.all(
-        json.data.map(async (item: any) => {
-          // Since getSignedVideoUrl is a backend function in this codebase, 
-          // we should actually return the signed URL from the API directly.
-          // Let's modify the client to just fetch from another quick endpoint or 
-          // we can assume the API returns it? The API didn't. 
-          // wait, since `getSignedVideoUrl` is in lib, we can't call it here directly.
-          // Since we need it, let's create a small wrapper endpoint or we can just send the signed URL in the `/api/admin/review` directly later.
-          // Let's call a theoretical `POST /api/responses/signed-url` if needed, 
-          // OR since admin review API is ours, let's just assume we will update it to attach `signed_video_url` server-side before returning, or just add a small server action.
-          // Wait, I can't easily change the API route now without another step. 
-          // But actually, Supabase Storage can create signed URLs on the client if we use the client SDK! 
-          // Let's do that!
-          const { supabase } = await import('@/lib/supabase');
-          const { data } = await supabase.storage.from('response-videos').createSignedUrl(item.video_url, 3600);
-          return { ...item, signed_video: data?.signedUrl };
-        })
-      );
-      
-      setReviews(enhanced);
+
+      // The API now returns signed_video directly in each item
+      setReviews(json.data || []);
     } catch (error: any) {
       toast.error('Failed to load reviews');
     } finally {
@@ -67,7 +47,7 @@ export default function ReviewPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       
-      toast.success(\`Video \${action}d successfully\`);
+      toast.success(`Video ${action}d successfully`);
       setReviews(reviews.filter(r => r.id !== id));
       if (action === 'reject') {
         setRejectId(null);
@@ -104,11 +84,38 @@ export default function ReviewPage() {
           {reviews.map((review) => (
             <div key={review.id} className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm flex flex-col md:flex-row">
               {/* Video Side */}
-              <div className="md:w-5/12 bg-black flex items-center justify-center">
+              <div className="md:w-5/12 bg-black flex items-center justify-center min-h-[250px]">
                 {review.signed_video ? (
-                   <video controls src={review.signed_video} className="w-full h-full object-contain max-h-[400px]" />
+                   <video
+                     controls
+                     src={review.signed_video}
+                     className="w-full h-full object-contain max-h-[400px]"
+                     preload="metadata"
+                     onError={(e) => {
+                       console.error(`Video playback error for review ${review.id}:`, e);
+                       // Mark this review's video as failed so UI can show retry
+                       const target = e.currentTarget;
+                       target.style.display = 'none';
+                       const parent = target.parentElement;
+                       if (parent && !parent.querySelector('.video-error-msg')) {
+                         const errDiv = document.createElement('div');
+                         errDiv.className = 'video-error-msg text-gray-400 p-10 flex flex-col items-center gap-3 text-center';
+                         errDiv.innerHTML = `
+                           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                           <p>Video format not supported by browser.<br/>Try downloading or refreshing.</p>
+                         `;
+                         parent.appendChild(errDiv);
+                       }
+                     }}
+                   />
                 ) : (
-                   <div className="text-gray-400 p-10">Video unavailable</div>
+                   <div className="text-gray-400 p-10 flex flex-col items-center gap-3">
+                     <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                     <p className="text-center">Video could not be loaded.<br/>The signed URL may have expired.</p>
+                     <Button variant="outline" size="sm" onClick={fetchReviews} className="text-white border-gray-600 hover:bg-gray-800">
+                       Refresh & Retry
+                     </Button>
+                   </div>
                 )}
               </div>
               
@@ -175,7 +182,7 @@ export default function ReviewPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Reason for rejection</label>
             <Textarea 
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRejectReason(e.target.value)}
               placeholder="e.g., Video is too blurry, Audio is not clear..."
               className="resize-none"
               rows={4}

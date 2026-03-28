@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'senior';
@@ -15,6 +15,7 @@ export default function VerifyOtpPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const submittingRef = useRef(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -79,6 +80,8 @@ export default function VerifyOtpPage() {
       return;
     }
 
+    if (submittingRef.current || loading) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const res = await fetch('/api/auth/verify-otp', {
@@ -99,12 +102,13 @@ export default function VerifyOtpPage() {
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   // Auto-submit when fully filled
   useEffect(() => {
-    if (otp.join('').length === 6 && !loading) {
+    if (otp.join('').length === 6 && !loading && !submittingRef.current) {
       handleSubmit();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,7 +124,7 @@ export default function VerifyOtpPage() {
       
       const payload = isOwner 
         ? { email }
-        : { email, role, is_new_user: false }; // Simplification for resend
+        : { email, name: 'User', role, is_new_user: false };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -197,7 +201,7 @@ export default function VerifyOtpPage() {
         
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
-            <span className="text-gray-500">Didn't receive the code? </span>
+            <span className="text-gray-500">Didn&apos;t receive the code? </span>
             <button
               type="button"
               onClick={handleResend}
@@ -218,5 +222,13 @@ export default function VerifyOtpPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>}>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

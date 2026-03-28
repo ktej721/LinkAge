@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import VideoRecorder from '@/components/VideoRecorder';
-import { Globe, Loader2, Video, FileText, UserCircle2 } from 'lucide-react';
+import { Globe, Loader2, Video, FileText, UserCircle2, Phone } from 'lucide-react';
+import Link from 'next/link';
 import { Request } from '@/types';
 
 export default function AnswerRequestPage() {
@@ -45,12 +46,19 @@ export default function AnswerRequestPage() {
         setRequest(json.data);
 
         if (json.data.audio_url) {
-          // Client can't generate signed URLs easily, we need a helper endpoint.
-          // Wait, the user didn't request a direct GET endpoint for a single audio file signed URL. 
-          // We can fetch it by sending a POST to a custom utility or just doing it server side. 
-          // For now, I will skip fetching signed audio gracefully directly here if we don't have the endpoint.
-          // Oh, actually we just built getSignedAudioUrl but it's server-only.
-          // I'll render the audio if we had a way. We can fetch it via server action later.
+          try {
+            const audioRes = await fetch('/api/audio/signed-url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: json.data.audio_url }),
+            });
+            const audioJson = await audioRes.json();
+            if (audioRes.ok && audioJson.signedUrl) {
+              setSignedAudioUrl(audioJson.signedUrl);
+            }
+          } catch (err) {
+            console.error('Failed to fetch signed audio URL:', err);
+          }
         }
       } catch (error: any) {
         toast.error(error.message || 'Failed to load request');
@@ -64,24 +72,48 @@ export default function AnswerRequestPage() {
 
   const uploadVideo = async (blob: Blob): Promise<string | null> => {
     try {
-      const { path, url } = await fetch('/api/responses/upload-url', {
+      console.log('[uploadVideo] Starting upload, blob size:', blob.size, 'type:', blob.type);
+      
+      // Detect the actual file type and name
+      const blobType = blob.type || 'video/webm';
+      // If the blob is a File (from file upload), use its name; otherwise default
+      const fileName = (blob as File).name || 'response.webm';
+      
+      const response = await fetch('/api/responses/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: 'response.webm', contentType: 'video/webm' }),
-      }).then(res => res.json());
+        body: JSON.stringify({ filename: fileName, contentType: blobType }),
+      });
+      const json = await response.json();
+      console.log('[uploadVideo] Upload URL response:', JSON.stringify(json));
 
-      if (!url) throw new Error('Failed to get upload URL');
+      if (!response.ok || !json.signedUrl) {
+        throw new Error(json.error || 'Failed to get upload URL');
+      }
 
-      const uploadRes = await fetch(url, {
+      const { path, signedUrl, token, contentType: resolvedContentType } = json;
+      const uploadContentType = resolvedContentType || blobType || 'video/webm';
+      console.log('[uploadVideo] Got signed URL, uploading with contentType:', uploadContentType);
+
+      const uploadRes = await fetch(signedUrl, {
         method: 'PUT',
         body: blob,
-        headers: { 'Content-Type': 'video/webm' },
+        headers: {
+          'Content-Type': uploadContentType,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
       });
 
-      if (!uploadRes.ok) throw new Error('Upload failed');
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text().catch(() => '');
+        console.error('[uploadVideo] PUT failed:', uploadRes.status, errText);
+        throw new Error(`Upload failed (${uploadRes.status}): ${errText}`);
+      }
+      console.log('[uploadVideo] Upload successful, path:', path);
       return path;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Video upload error:', error);
+      toast.error(error.message || 'Video upload failed');
       return null;
     }
   };
@@ -177,9 +209,16 @@ export default function AnswerRequestPage() {
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{request.title}</h1>
         <p className="text-lg text-gray-700 whitespace-pre-wrap">{request.description}</p>
         
-        {signedAudioUrl && (
-          <div className="mt-6">
-            <audio controls src={signedAudioUrl} className="w-full" />
+        {request.audio_url && (
+          <div className="mt-6 bg-red-50 rounded-xl p-4 border border-red-200">
+            <p className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2">
+              🎙️ This question was asked via voice recording
+            </p>
+            {signedAudioUrl ? (
+              <audio controls src={signedAudioUrl} className="w-full" />
+            ) : (
+              <p className="text-sm text-gray-500 italic">Loading audio...</p>
+            )}
           </div>
         )}
       </div>
@@ -189,12 +228,15 @@ export default function AnswerRequestPage() {
         <h2 className="text-xl font-bold text-gray-900 mb-6">Provide your answer</h2>
 
         <Tabs defaultValue="video" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
+          <TabsList className="w-full grid grid-cols-3 mb-8 bg-slate-100 p-1 rounded-xl">
             <TabsTrigger value="video" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Video className="w-4 h-4 mr-2 inline" /> Video Answer
+              <Video className="w-4 h-4 mr-2 inline" /> Video
             </TabsTrigger>
             <TabsTrigger value="text" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <FileText className="w-4 h-4 mr-2 inline" /> Written Answer
+              <FileText className="w-4 h-4 mr-2 inline" /> Text
+            </TabsTrigger>
+            <TabsTrigger value="call" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Phone className="w-4 h-4 mr-2 inline" /> Live Call
             </TabsTrigger>
           </TabsList>
           
@@ -213,7 +255,7 @@ export default function AnswerRequestPage() {
                 <label className="block font-medium text-gray-700">Add a short text summary (Optional)</label>
                 <Textarea 
                   value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTextContent(e.target.value)}
                   placeholder="e.g., Here are the 3 steps I mentioned in the video..." 
                   className="min-h-[100px] resize-y rounded-xl"
                 />
@@ -233,14 +275,14 @@ export default function AnswerRequestPage() {
           <TabsContent value="text" className="space-y-6">
             <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl border border-emerald-100 flex items-start gap-3 text-sm">
               <div className="mt-0.5">🔒</div>
-              <p>Written answers go live immediately. <strong>This feature is only available for fully verified (KYC) student volunteers.</strong> Ensure your instructions are clear and large enough to read.</p>
+              <p>Written answers go live immediately to help seniors. Ensure your instructions are clear and easy to follow.</p>
             </div>
 
             <form onSubmit={handleTextSubmit} className="space-y-6">
               <div className="space-y-3">
                 <Textarea 
                   value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTextContent(e.target.value)}
                   placeholder="Type your detailed, step-by-step answer here..." 
                   className="min-h-[200px] text-lg p-5 rounded-xl border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                   required
@@ -256,6 +298,29 @@ export default function AnswerRequestPage() {
                 {submitting ? 'Submitting...' : 'Post Written Answer'}
               </Button>
             </form>
+          </TabsContent>
+
+          <TabsContent value="call" className="space-y-6">
+            <div className="bg-indigo-50 text-indigo-800 p-4 rounded-xl border border-indigo-100 flex items-start gap-3 text-sm">
+              <div className="mt-0.5">📹</div>
+              <p>Start a <strong>free live video call</strong> with the senior using Jitsi Meet. No accounts needed — just click and connect face-to-face in real time.</p>
+            </div>
+
+            <div className="text-center py-8 space-y-6">
+              <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                <Phone className="w-10 h-10 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Ready to help live?</h3>
+                <p className="text-gray-600 max-w-sm mx-auto">The senior will receive a notification and can join the call instantly.</p>
+              </div>
+              <Link href={`/helper/call/${requestId}`}>
+                <Button size="lg" className="text-lg py-6 px-10 rounded-xl bg-green-600 hover:bg-green-700 gap-2">
+                  <Phone className="w-5 h-5" />
+                  Start Live Video Call
+                </Button>
+              </Link>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

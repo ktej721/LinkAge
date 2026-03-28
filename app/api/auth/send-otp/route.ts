@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   email: z.string().email(),
-  name: z.string().min(2),
+  name: z.string().min(1).default('User'),
   role: z.enum(['senior', 'helper']),
   language_preference: z.string().optional(),
   phone: z.string().optional(),
@@ -79,15 +79,23 @@ export async function POST(req: NextRequest) {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await supabaseAdmin.from('otp_tokens').insert({
+    console.log('[send-otp] Generated OTP:', otp, 'for:', data.email, 'expires:', expiresAt);
+
+    const { error: insertError } = await supabaseAdmin.from('otp_tokens').insert({
       email: data.email,
       otp,
       purpose: data.is_new_user ? 'register' : 'login',
       expires_at: expiresAt,
     });
 
+    if (insertError) {
+      console.error('[send-otp] Failed to insert OTP:', insertError);
+      return NextResponse.json({ error: 'Failed to generate OTP. Database error.' }, { status: 500 });
+    }
+
     // Send email
     await sendOTPEmail(data.email, otp, data.name);
+    console.log('[send-otp] Email sent successfully to:', data.email);
 
     return NextResponse.json({ success: true, message: 'OTP sent successfully' });
   } catch (error: any) {

@@ -84,7 +84,7 @@ export default async function SeniorDashboard() {
             <div className="bg-orange-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
               <Mic className="w-12 h-12 text-orange-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">You haven't asked anything yet!</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">You haven&apos;t asked anything yet!</h3>
             <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
               Tap the big button above and just speak your question. Our student volunteers are ready to help.
             </p>

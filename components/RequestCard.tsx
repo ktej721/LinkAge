@@ -61,11 +61,23 @@ export default function RequestCard({ request, viewAs }: RequestCardProps) {
         )}
       </div>
 
-      {viewAs === 'senior' && (
-        <Link href={`/senior/my-requests?id=${request.id}`} className="block">
-          <Button variant="outline" size="sm" className="w-full">View Details</Button>
-        </Link>
-      )}
+      {viewAs === 'senior' && (() => {
+        const callResponse = request.responses?.find((r: any) => r.response_type === 'video_call' && r.call_url);
+        return (
+          <div className="space-y-2">
+            {callResponse && (
+              <Link href={`/senior/call?url=${encodeURIComponent((callResponse as any).call_url)}`} className="block">
+                <Button size="sm" className="w-full bg-green-500 hover:bg-green-600 text-white text-lg py-5 rounded-xl font-bold gap-2 animate-pulse">
+                  📞 Join Call
+                </Button>
+              </Link>
+            )}
+            <Link href={`/senior/my-requests?id=${request.id}`} className="block">
+              <Button variant="outline" size="sm" className="w-full">View Details</Button>
+            </Link>
+          </div>
+        );
+      })()}
       {viewAs === 'helper' && request.status === 'open' && (
         <Link href={`/helper/answer/${request.id}`} className="block">
           <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Help with this →</Button>

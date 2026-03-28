@@ -13,20 +13,34 @@ export async function POST(req: NextRequest) {
   try {
     const { email, otp } = schema.parse(await req.json());
 
-    // Verify OTP
-    const { data: token } = await supabaseAdmin
+    console.log('[verify-otp] Verifying OTP for:', email, 'OTP entered:', otp);
+
+    // Get the latest unused OTP for this email
+    const { data: token, error: tokenError } = await supabaseAdmin
       .from('otp_tokens')
       .select('*')
       .eq('email', email)
-      .eq('otp', otp)
       .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
+    console.log('[verify-otp] Token found:', token ? `OTP=${token.otp}, expires=${token.expires_at}` : 'NONE', 'Error:', tokenError?.message);
+
     if (!token) {
-      return NextResponse.json({ error: 'Invalid or expired OTP. Please try again.' }, { status: 400 });
+      return NextResponse.json({ error: 'No active OTP found. Please request a new one.' }, { status: 400 });
+    }
+
+    // Check if OTP matches
+    if (token.otp !== otp) {
+      console.log('[verify-otp] OTP mismatch. Expected:', token.otp, 'Got:', otp);
+      return NextResponse.json({ error: 'Invalid OTP. Please check and try again.' }, { status: 400 });
+    }
+
+    // Check if expired
+    if (new Date(token.expires_at) < new Date()) {
+      console.log('[verify-otp] OTP expired at:', token.expires_at, 'Current time:', new Date().toISOString());
+      return NextResponse.json({ error: 'OTP has expired. Please request a new one.' }, { status: 400 });
     }
 
     // Mark OTP as used

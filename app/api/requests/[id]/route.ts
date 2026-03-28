@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       senior:users!requests_senior_id_fkey(id, name, language_preference, phone),
       responses(
         *,
-        helper:users!responses_helper_id_fkey(id, name, college_name, is_kyc_verified)
+        helper:users!responses_helper_id_fkey(id, name, college_name)
       )
     `)
     .eq('id', params.id)

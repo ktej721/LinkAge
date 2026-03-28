@@ -62,7 +62,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3 relative z-10">Voice-First Experience</h3>
               <p className="text-gray-600 text-lg leading-relaxed relative z-10">
-                Seniors don't need to type long questions. Just press a button and speak in your preferred language.
+                Seniors don&apos;t need to type long questions. Just press a button and speak in your preferred language.
               </p>
             </div>
 
