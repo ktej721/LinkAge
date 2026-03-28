@@ -106,3 +106,52 @@
     @apply font-sans;
   }
 }
+
+/* ═══════════════════════════════════════════════ */
+/* PWA / Mobile-native feel                       */
+/* ═══════════════════════════════════════════════ */
+
+/* Disable pull-to-refresh */
+html, body {
+  overscroll-behavior-y: none;
+}
+
+/* Remove tap highlight on iOS/Android */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on non-input elements for native feel */
+body:not(input):not(textarea):not([contenteditable="true"]) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+/* Safe area padding for notched phones */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure bottom nav doesn't cover content */
+.has-bottom-nav main {
+  padding-bottom: 5rem;
+}
+
+/* Smooth scrolling for app-like feel */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Standalone PWA: hide browser-specific elements */
+@media (display-mode: standalone) {
+  /* Extra top padding for status bar area */
+  nav.sticky {
+    padding-top: env(safe-area-inset-top);
+  }
+}

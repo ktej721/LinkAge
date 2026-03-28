@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import NavBar from '@/components/NavBar';
+import BottomNav from '@/components/BottomNav';
 import CallNotification from '@/components/CallNotification';
 import { supabaseAdmin } from '@/lib/supabase-server';
 
@@ -30,12 +31,13 @@ export default async function SeniorLayout({ children }: { children: React.React
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900 text-lg">
+    <div className="min-h-screen bg-slate-50 text-gray-900 text-lg has-bottom-nav">
       <CallNotification seniorId={user.id} requestIds={requestIds} />
       <NavBar user={user} navItems={navItems} />
-      <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-8 sm:px-6 lg:px-8">
         {children}
       </main>
+      <BottomNav role="senior" />
     </div>
   );
 }
