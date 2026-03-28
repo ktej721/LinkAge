@@ -11,9 +11,12 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">🔗 LinkAge</span>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
+            <Link href="/login?role=helper">
+              <Button variant="ghost" className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-semibold text-base px-5">Student Login</Button>
+            </Link>
             <Link href="/login?role=senior">
-              <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-semibold text-base px-6">Login</Button>
+              <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-semibold text-base px-5">Senior Login</Button>
             </Link>
           </div>
         </div>
@@ -37,7 +40,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <Link href="/login?role=helper">
-                <Button size="lg" className="h-16 px-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xl font-bold shadow-lg shadow-indigo-600/30 w-full sm:w-auto hover:-translate-y-1 transition-transform">
+                <Button size="lg" className="h-16 px-10 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xl font-bold shadow-lg shadow-teal-600/30 w-full sm:w-auto hover:-translate-y-1 transition-transform">
                   I Want to Help (Student)
                 </Button>
               </Link>

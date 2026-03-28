@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { getSession } from '@/lib/auth';
+import { awardPoints } from '@/lib/award-points';
 
 // GET: All pending video responses for review — with signed video URLs
 export async function GET(req: NextRequest) {
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
     .from('responses')
     .update(updateData)
     .eq('id', response_id)
-    .select('request_id')
+    .select('request_id, helper_id')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -126,6 +127,9 @@ export async function POST(req: NextRequest) {
       .from('requests')
       .update({ status: 'answered' })
       .eq('id', response.request_id);
+
+    // Award +15 points to helper for approved video response
+    await awardPoints(response.helper_id, 15, 'response_approved', response_id);
   }
 
   return NextResponse.json({ success: true });

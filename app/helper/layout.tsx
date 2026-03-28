@@ -1,7 +1,6 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import NavBar from '@/components/NavBar';
-import { ShieldCheck } from 'lucide-react';
 
 export default async function HelperLayout({ children }: { children: React.ReactNode }) {
   const user = await getSession();
@@ -13,6 +12,8 @@ export default async function HelperLayout({ children }: { children: React.React
   const navItems = [
     { label: 'Dashboard', href: '/helper/dashboard' },
     { label: 'Browse Requests', href: '/helper/browse' },
+    { label: 'Leaderboard', href: '/helper/leaderboard' },
+    { label: 'My Stats', href: '/helper/my-stats' },
   ];
 
   return (

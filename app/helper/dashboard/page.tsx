@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Search, Settings, ShieldAlert, ShieldCheck, Video, Clock } from 'lucide-react';
+import { CheckCircle2, Search, Settings, ShieldCheck, Video, Clock, Trophy, BarChart3 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,9 +72,35 @@ export default async function HelperDashboard() {
       {/* Main Action */}
       <div className="flex justify-center">
         <Link href="/helper/browse" className="w-full sm:w-auto">
-          <Button size="lg" className="w-full sm:w-auto text-lg py-6 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 gap-2 shadow-md">
+          <Button size="lg" className="w-full sm:w-auto text-lg py-6 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 gap-2 shadow-md">
             <Search className="w-5 h-5" /> Browse Open Requests
           </Button>
+        </Link>
+      </div>
+
+      {/* Quick Links */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/helper/leaderboard">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex items-center gap-4 group">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+              <Trophy className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Leaderboard</p>
+              <p className="text-sm text-gray-500">See how you rank</p>
+            </div>
+          </div>
+        </Link>
+        <Link href="/helper/my-stats">
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-200 transition-all flex items-center gap-4 group">
+            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+              <BarChart3 className="w-6 h-6 text-teal-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">My Stats</p>
+              <p className="text-sm text-gray-500">Points, streaks & milestones</p>
+            </div>
+          </div>
         </Link>
       </div>
 

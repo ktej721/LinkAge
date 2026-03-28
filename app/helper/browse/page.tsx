@@ -52,7 +52,7 @@ export default function BrowseRequestsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Browse Requests</h1>
           <p className="text-gray-500 mt-1">
-            {!loading && <span className="font-semibold text-indigo-600">{filteredRequests.length}</span>} open requests waiting for help
+            {!loading && <span className="font-semibold text-teal-600">{filteredRequests.length}</span>} open requests waiting for help
           </p>
         </div>
       </div>

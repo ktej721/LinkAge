@@ -187,7 +187,7 @@ export default function AnswerRequestPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
       </div>
     );
   }
@@ -265,7 +265,7 @@ export default function AnswerRequestPage() {
                 type="submit" 
                 size="lg" 
                 disabled={submitting || !videoBlob} 
-                className="w-full text-lg py-6 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                className="w-full text-lg py-6 rounded-xl bg-teal-600 hover:bg-teal-700"
               >
                 {submitting ? 'Uploading...' : 'Submit Video Answer'}
               </Button>
@@ -284,7 +284,7 @@ export default function AnswerRequestPage() {
                   value={textContent}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTextContent(e.target.value)}
                   placeholder="Type your detailed, step-by-step answer here..." 
-                  className="min-h-[200px] text-lg p-5 rounded-xl border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                  className="min-h-[200px] text-lg p-5 rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   required
                 />
               </div>
@@ -293,7 +293,7 @@ export default function AnswerRequestPage() {
                 type="submit" 
                 size="lg" 
                 disabled={submitting} 
-                className="w-full text-lg py-6 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                className="w-full text-lg py-6 rounded-xl bg-teal-600 hover:bg-teal-700"
               >
                 {submitting ? 'Submitting...' : 'Post Written Answer'}
               </Button>

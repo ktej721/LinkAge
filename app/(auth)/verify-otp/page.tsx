@@ -10,6 +10,9 @@ function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'senior';
+  const flow = searchParams.get('flow'); // 'register' for helper registration
+
+  const isHelperRegister = role === 'helper' && flow === 'register';
 
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -83,7 +86,44 @@ function VerifyOtpContent() {
     if (submittingRef.current || loading) return;
     submittingRef.current = true;
     setLoading(true);
+
     try {
+      // ─── Helper Registration Flow: verify OTP + create account ───
+      if (isHelperRegister) {
+        const storedData = sessionStorage.getItem('linkage_helper_register');
+        if (!storedData) {
+          toast.error('Registration data not found. Please start over.');
+          router.push('/login?role=helper');
+          return;
+        }
+
+        const regData = JSON.parse(storedData);
+
+        const res = await fetch('/api/auth/helper-register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: regData.email,
+            name: regData.name,
+            password: regData.password,
+            otp: otpValue,
+            language_preference: regData.language_preference,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        // Clean up stored data
+        sessionStorage.removeItem('linkage_helper_register');
+        localStorage.removeItem('linkage_auth_email');
+
+        toast.success('Account created successfully! Welcome to LinkAge! 🎉');
+        router.push(data.redirect || '/helper/dashboard');
+        return;
+      }
+
+      // ─── Standard OTP Flow (seniors, owners) ───
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,23 +159,37 @@ function VerifyOtpContent() {
     
     setLoading(true);
     try {
-      const isOwner = role === 'owner';
-      const endpoint = isOwner ? '/api/auth/owner-login' : '/api/auth/send-otp';
-      
-      const payload = isOwner 
-        ? { email }
-        : { email, name: 'User', role, is_new_user: false };
+      if (isHelperRegister) {
+        // Resend helper registration OTP
+        const storedData = sessionStorage.getItem('linkage_helper_register');
+        const regData = storedData ? JSON.parse(storedData) : { name: 'User' };
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+        const res = await fetch('/api/auth/helper-send-register-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name: regData.name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      } else {
+        const isOwner = role === 'owner';
+        const endpoint = isOwner ? '/api/auth/owner-login' : '/api/auth/send-otp';
+        
+        const payload = isOwner 
+          ? { email }
+          : { email, name: 'User', role, is_new_user: false };
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      toast.success('New OTP sent to your email');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      }
+
+      toast.success('New code sent to your email');
       setTimeLeft(60);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -155,10 +209,17 @@ function VerifyOtpContent() {
           <div className="flex justify-center mb-4">
             <h1 className="text-3xl font-bold text-indigo-600 tracking-tight">🔗 LinkAge</h1>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Verify Code</CardTitle>
+          <CardTitle className="text-3xl font-bold tracking-tight">
+            {isHelperRegister ? 'Verify Your Email' : 'Verify Code'}
+          </CardTitle>
           <CardDescription className="text-lg">
             We sent a 6-digit code to <br />
             <span className="font-medium text-gray-900">{email}</span>
+            {isHelperRegister && (
+              <span className="block text-sm text-teal-600 mt-2 font-medium">
+                ✨ Your account will be created once verified
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         
@@ -191,10 +252,17 @@ function VerifyOtpContent() {
             <Button 
               type="submit" 
               size="lg"
-              className="w-full text-xl py-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70"
+              className={`w-full text-xl py-8 rounded-2xl disabled:opacity-70 ${
+                isHelperRegister
+                  ? 'bg-teal-600 hover:bg-teal-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
               disabled={loading || otp.join('').length !== 6}
             >
-              {loading ? 'Verifying...' : 'Verify Now'}
+              {loading 
+                ? (isHelperRegister ? 'Creating Account...' : 'Verifying...') 
+                : (isHelperRegister ? 'Verify & Create Account' : 'Verify Now')
+              }
             </Button>
           </form>
         </CardContent>
@@ -214,10 +282,13 @@ function VerifyOtpContent() {
           
           <button
              type="button"
-             onClick={() => router.push(`/login?role=${role}`)}
+             onClick={() => {
+               sessionStorage.removeItem('linkage_helper_register');
+               router.push(`/login?role=${role}`);
+             }}
              className="text-gray-500 hover:text-gray-900 text-sm font-medium"
           >
-             ← Change email address
+             ← {isHelperRegister ? 'Back to Registration' : 'Change email address'}
           </button>
         </CardFooter>
       </Card>

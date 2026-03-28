@@ -80,7 +80,7 @@ export default function RequestCard({ request, viewAs }: RequestCardProps) {
       })()}
       {viewAs === 'helper' && request.status === 'open' && (
         <Link href={`/helper/answer/${request.id}`} className="block">
-          <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Help with this →</Button>
+          <Button size="sm" className="w-full bg-teal-600 hover:bg-teal-700 text-white">Help with this →</Button>
         </Link>
       )}
     </div>

@@ -57,3 +57,36 @@ export interface Session {
   user: User;
   session_token: string;
 }
+
+// Leaderboard & Points System Types
+export type HelperTier = 'Seedling' | 'Helper' | 'Star' | 'Champion' | 'Legend';
+
+export interface HelperPointEvent {
+  id: string;
+  helper_id: string;
+  points: number;
+  reason: string;
+  reference_id?: string;
+  created_at: string;
+}
+
+export interface HelperLeaderboardEntry {
+  rank: number;
+  helper_id: string;
+  name: string;
+  college_name?: string;
+  college_domain?: string;
+  total_points: number;
+  accepted_count: number;
+  response_count: number;
+  tier: HelperTier;
+  streak: number;
+  profile_picture_url?: string;
+}
+
+export interface HelperStreak {
+  helper_id: string;
+  current_streak: number;
+  last_active_date: string;
+  longest_streak: number;
+}

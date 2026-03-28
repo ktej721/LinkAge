@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { getSession } from '@/lib/auth';
+import { awardPoints } from '@/lib/award-points';
 
 // POST: Submit a response (helper only)
 export async function POST(req: NextRequest) {
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Award points for submitting a response
+  await awardPoints(user.id, 5, 'response_submitted', data.id);
 
   return NextResponse.json({ data }, { status: 201 });
 }

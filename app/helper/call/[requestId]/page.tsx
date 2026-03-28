@@ -73,8 +73,8 @@ export default function HelperCallPage() {
 
       {/* Pre-call setup */}
       <div className="bg-white rounded-3xl p-8 sm:p-10 border border-gray-200 shadow-sm text-center space-y-8">
-        <div className="bg-indigo-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto">
-          <Video className="w-12 h-12 text-indigo-600" />
+        <div className="bg-teal-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto">
+          <Video className="w-12 h-12 text-teal-600" />
         </div>
 
         <div className="space-y-3">
@@ -96,7 +96,7 @@ export default function HelperCallPage() {
           onClick={handleStartCall}
           disabled={saving}
           size="lg"
-          className="w-full max-w-sm text-xl py-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg gap-3"
+          className="w-full max-w-sm text-xl py-8 rounded-2xl bg-teal-600 hover:bg-teal-700 shadow-lg gap-3"
         >
           {saving ? (
             <>

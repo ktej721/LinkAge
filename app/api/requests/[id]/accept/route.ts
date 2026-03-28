@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { getSession } from '@/lib/auth';
+import { awardPoints } from '@/lib/award-points';
 
 // POST: Senior accepts a specific response as the solution
 export async function POST(
@@ -36,10 +37,10 @@ export async function POST(
     return NextResponse.json({ error: 'Request is already closed.' }, { status: 409 });
   }
 
-  // Verify the response belongs to this request
+  // Verify the response belongs to this request — also fetch helper_id for points
   const { data: response, error: respErr } = await supabaseAdmin
     .from('responses')
-    .select('id, request_id, is_approved')
+    .select('id, request_id, helper_id, is_approved')
     .eq('id', response_id)
     .eq('request_id', requestId)
     .single();
@@ -76,6 +77,9 @@ export async function POST(
   if (closeErr) {
     return NextResponse.json({ error: closeErr.message }, { status: 500 });
   }
+
+  // Award 50 points to the helper whose response was accepted
+  await awardPoints(response.helper_id, 50, 'accepted_by_senior', response_id);
 
   return NextResponse.json({ success: true, message: 'Solution accepted! Request is now closed.' });
 }
