@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'sonner';
 import { cn } from "@/lib/utils";
+import InstallPrompt from '@/components/InstallPrompt';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#d97706",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -44,8 +45,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="LinkAge" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
-      <body className={cn(inter.className, "overscroll-none")}>
+      <body className={inter.className}>
         {children}
+        <InstallPrompt />
         <Toaster position="top-center" richColors />
         <script
           dangerouslySetInnerHTML={{

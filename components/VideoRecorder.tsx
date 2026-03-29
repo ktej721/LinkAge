@@ -183,7 +183,7 @@ export default function VideoRecorder({ onVideoBlob, maxDurationSeconds = 120 }:
               type="button"
               onClick={triggerFileUpload}
               variant="outline"
-              className="gap-2 font-semibold border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              className="gap-2 font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
             >
               <Upload className="w-4 h-4" /> Upload Video File
             </Button>

@@ -10,7 +10,6 @@ export default async function OwnerDashboard() {
   const user = await getSession();
   if (!user) return null;
 
-  // Fetch all basic stats
   const [
     { count: seniorsCount },
     { count: helpersCount },
@@ -29,13 +28,13 @@ export default async function OwnerDashboard() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-500 mt-1">Platform overview and pending moderations.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-500 mt-1 text-sm">Platform overview and pending moderations.</p>
         </div>
         
         {pendingReviews ? pendingReviews > 0 ? (
           <Link href="/owner/review">
-             <Button className="bg-purple-600 hover:bg-purple-700 text-white gap-2 h-12 px-6 rounded-xl shadow-md">
+             <Button className="bg-amber-600 hover:bg-amber-700 text-white gap-2 h-12 px-6 rounded-xl shadow-md">
                <ShieldAlert className="w-5 h-5" /> Review {pendingReviews} Pending Videos
              </Button>
           </Link>
@@ -43,44 +42,44 @@ export default async function OwnerDashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 text-gray-500 mb-2">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
             <Users className="w-5 h-5" />
             <span className="font-medium text-sm">Seniors</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{seniorsCount || 0}</p>
+          <p className="text-3xl font-bold text-slate-900">{seniorsCount || 0}</p>
         </div>
         
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 text-gray-500 mb-2">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
             <Users className="w-5 h-5" />
             <span className="font-medium text-sm">Helpers</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{helpersCount || 0}</p>
+          <p className="text-3xl font-bold text-slate-900">{helpersCount || 0}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 text-gray-500 mb-2">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
             <FileQuestion className="w-5 h-5" />
             <span className="font-medium text-sm">Total Requests</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{totalRequests || 0}</p>
+          <p className="text-3xl font-bold text-slate-900">{totalRequests || 0}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 text-blue-600 mb-2">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 text-amber-600 mb-2">
             <MessageSquare className="w-5 h-5" />
             <span className="font-medium text-sm">Open Requests</span>
           </div>
-          <p className="text-3xl font-bold text-blue-700">{openRequests || 0}</p>
+          <p className="text-3xl font-bold text-slate-900">{openRequests || 0}</p>
         </div>
 
-        <div className="bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm">
-          <div className="flex items-center gap-2 text-purple-700 mb-2">
+        <div className="bg-amber-50 p-6 rounded-xl border border-amber-200 shadow-sm">
+          <div className="flex items-center gap-2 text-amber-700 mb-2">
             <Video className="w-5 h-5" />
             <span className="font-medium text-sm">Pending Videos</span>
           </div>
-          <p className="text-3xl font-bold text-purple-700">{pendingReviews || 0}</p>
+          <p className="text-3xl font-bold text-amber-700">{pendingReviews || 0}</p>
         </div>
       </div>
     </div>

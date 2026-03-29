@@ -61,7 +61,7 @@ export default function ReviewPage() {
   };
 
   if (loading) {
-     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-purple-600 animate-spin" /></div>;
+     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-amber-600 animate-spin" /></div>;
   }
 
   return (
@@ -73,8 +73,8 @@ export default function ReviewPage() {
 
       {reviews.length === 0 ? (
         <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-gray-300">
-          <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck className="w-8 h-8 text-purple-600" />
+          <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8 text-amber-600" />
           </div>
           <h3 className="text-xl font-bold text-gray-900">Queue is empty!</h3>
           <p className="text-gray-500 mt-2">All student videos have been reviewed.</p>
@@ -133,10 +133,10 @@ export default function ReviewPage() {
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                     <div className="flex items-center gap-3 mb-2">
-                       <User className="w-5 h-5 text-indigo-600" />
+                       <User className="w-5 h-5 text-amber-600" />
                        <div>
                          <p className="font-medium text-gray-900">{review.helper?.name}</p>
-                         <p className="text-xs text-indigo-600">{review.helper?.college_name} ({review.helper?.email})</p>
+                         <p className="text-xs text-amber-600">{review.helper?.college_name} ({review.helper?.email})</p>
                        </div>
                     </div>
                     {review.text_content && (
@@ -152,7 +152,7 @@ export default function ReviewPage() {
                   <Button 
                     onClick={() => handleAction(review.id, 'approve')}
                     disabled={actionLoading === review.id}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white gap-2 h-12"
                   >
                     <CheckCircle className="w-5 h-5" />
                     {actionLoading === review.id ? 'Approving...' : 'Approve & Publish'}

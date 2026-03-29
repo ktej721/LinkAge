@@ -207,7 +207,7 @@ function VerifyOtpContent() {
       <Card className="w-full max-w-md shadow-lg border-gray-200">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <h1 className="text-3xl font-bold text-indigo-600 tracking-tight">🔗 LinkAge</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">LinkAge</h1>
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight">
             {isHelperRegister ? 'Verify Your Email' : 'Verify Code'}
@@ -216,8 +216,8 @@ function VerifyOtpContent() {
             We sent a 6-digit code to <br />
             <span className="font-medium text-gray-900">{email}</span>
             {isHelperRegister && (
-              <span className="block text-sm text-teal-600 mt-2 font-medium">
-                ✨ Your account will be created once verified
+              <span className="block text-sm text-amber-600 mt-2 font-medium">
+                Your account will be created once verified
               </span>
             )}
           </CardDescription>
@@ -243,7 +243,7 @@ function VerifyOtpContent() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   disabled={loading}
-                  className="w-12 h-16 sm:w-14 sm:h-16 text-center text-3xl font-bold rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 transition-all bg-white shadow-sm"
+                  className="w-12 h-16 sm:w-14 sm:h-16 text-center text-3xl font-bold rounded-xl border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500 disabled:opacity-50 transition-all bg-white shadow-sm"
                   autoFocus={index === 0}
                 />
               ))}
@@ -254,8 +254,8 @@ function VerifyOtpContent() {
               size="lg"
               className={`w-full text-xl py-8 rounded-2xl disabled:opacity-70 ${
                 isHelperRegister
-                  ? 'bg-teal-600 hover:bg-teal-700'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-amber-600 hover:bg-amber-700'
               }`}
               disabled={loading || otp.join('').length !== 6}
             >
@@ -274,7 +274,7 @@ function VerifyOtpContent() {
               type="button"
               onClick={handleResend}
               disabled={timeLeft > 0 || loading}
-              className={`font-semibold ${timeLeft > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-indigo-600 hover:text-indigo-800'}`}
+              className={`font-semibold ${timeLeft > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-amber-600 hover:text-amber-800'}`}
             >
               {timeLeft > 0 ? `Resend in ${timeLeft}s` : 'Resend Code'}
             </button>

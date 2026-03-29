@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md shadow-lg border-gray-200">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <h1 className="text-3xl font-bold text-indigo-600 tracking-tight">🔗 LinkAge</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">LinkAge</h1>
           </div>
 
           {step === 'email' && (
@@ -131,8 +131,8 @@ export default function ForgotPasswordPage() {
           {step === 'success' && (
             <>
               <div className="flex justify-center mb-2">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-amber-600" />
                 </div>
               </div>
               <CardTitle className="text-2xl">Password Updated!</CardTitle>
@@ -165,7 +165,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full text-lg py-6 bg-teal-600 hover:bg-teal-700"
+                className="w-full text-lg py-6 bg-amber-600 hover:bg-amber-700"
                 disabled={loading || !email}
               >
                 {loading ? 'Sending...' : 'Send Reset Code'}
@@ -196,7 +196,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full text-lg py-6 bg-teal-600 hover:bg-teal-700"
+                className="w-full text-lg py-6 bg-amber-600 hover:bg-amber-700"
                 disabled={loading || code.length !== 6}
               >
                 Continue
@@ -249,7 +249,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full text-lg py-6 bg-teal-600 hover:bg-teal-700"
+                className="w-full text-lg py-6 bg-amber-600 hover:bg-amber-700"
                 disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
               >
                 {loading ? 'Resetting...' : 'Reset Password'}

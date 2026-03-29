@@ -25,7 +25,7 @@ export async function getSession(): Promise<User | null> {
 
 export async function createSession(userId: string): Promise<string> {
   const token = crypto.randomUUID() + '-' + crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 10 years
   
   await supabase.from('user_sessions').insert({
     user_id: userId,

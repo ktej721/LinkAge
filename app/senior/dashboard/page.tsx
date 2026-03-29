@@ -1,22 +1,17 @@
 import { getSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-server';
-import RequestCard from '@/components/RequestCard';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Mic } from 'lucide-react';
+import { Mic, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
 
-// Force dynamic since it relies on cookies/session
 export const dynamic = 'force-dynamic';
 
 export default async function SeniorDashboard() {
   const user = await getSession();
   if (!user) return null;
 
-  // Get current hour for greeting
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  // Fetch recent requests
   const { data: requests } = await supabaseAdmin
     .from('requests')
     .select('*, responses(id, is_approved)')
@@ -25,75 +20,89 @@ export default async function SeniorDashboard() {
     .limit(5);
 
   const total = requests?.length || 0;
-  const answered = requests?.filter(r => r.status === 'answered' || r.status === 'closed').length || 0;
-  const open = requests?.filter(r => r.status === 'open').length || 0;
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="bg-orange-50 border border-orange-200 rounded-3xl p-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">{greeting}, {user.name.split(' ')[0]}! 👋</h1>
-        <p className="text-xl text-gray-700">How can our student helpers assist you today?</p>
+    <div className="space-y-6">
+      {/* Greeting — large for seniors */}
+      <div className="pt-1">
+        <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">{greeting},</h1>
+        <h1 className="text-2xl font-extrabold text-amber-600 leading-tight">{user.name.split(' ')[0]}!</h1>
+        <p className="text-base text-slate-500 mt-2">How can we help you today?</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-gray-500 text-base font-medium uppercase tracking-wider">Total Questions</p>
-            <p className="text-4xl font-bold text-gray-900 mt-1">{total}</p>
+      {/* Main CTA — extra-large touch target */}
+      <Link href="/senior/new-request" className="block">
+        <div className="bg-amber-600 active:bg-amber-700 rounded-2xl p-6 text-white shadow-lg active:shadow-md transition-all senior-card">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/25 w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Mic className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-extrabold mb-0.5">Ask a New Question</h2>
+              <p className="text-amber-100 text-sm">Tap here and speak your question</p>
+            </div>
+            <ChevronRight className="w-6 h-6 text-white/60 flex-shrink-0" />
           </div>
         </div>
-        <div className="bg-white rounded-2xl p-6 border border-green-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-green-600 text-base font-medium uppercase tracking-wider">Answered</p>
-            <p className="text-4xl font-bold text-green-700 mt-1">{answered}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-blue-600 text-base font-medium uppercase tracking-wider">Pending Help</p>
-            <p className="text-4xl font-bold text-blue-700 mt-1">{open}</p>
-          </div>
-        </div>
-      </div>
+      </Link>
 
-      {/* Main CTA */}
-      <div className="flex justify-center py-4">
-        <Link href="/senior/new-request" className="block w-full max-w-lg">
-          <Button size="lg" className="w-full text-xl py-8 rounded-3xl bg-orange-600 hover:bg-orange-700 shadow-lg hover:shadow-xl transition-all gap-3">
-            <Mic className="w-8 h-8" /> 
-            Ask a New Question
-          </Button>
-        </Link>
-      </div>
-
-      {/* Recent Requests */}
+      {/* Recent Questions */}
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Your Recent Questions</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-bold text-slate-900">Recent Questions</h2>
           {total > 0 && (
-            <Link href="/senior/my-requests" className="text-indigo-600 font-medium hover:underline text-lg">
-              View All →
+            <Link href="/senior/my-requests" className="text-amber-600 font-bold text-sm active:text-amber-700">
+              View All
             </Link>
           )}
         </div>
 
         {total === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-sm">
-            <div className="bg-orange-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Mic className="w-12 h-12 text-orange-600" />
+          <div className="bg-white rounded-2xl border-2 border-slate-200 p-8 text-center senior-card">
+            <div className="bg-amber-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mic className="w-10 h-10 text-amber-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">You haven&apos;t asked anything yet!</h3>
-            <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
-              Tap the big button above and just speak your question. Our student volunteers are ready to help.
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No questions yet</h3>
+            <p className="text-base text-slate-500 leading-relaxed">
+              Tap the button above and speak your question. Our student volunteers are ready to help you.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {requests?.map(req => (
-              <RequestCard key={req.id} request={req as any} viewAs="senior" />
-            ))}
+          <div className="space-y-3">
+            {requests?.map(req => {
+              const hasApproved = req.responses?.some((r: any) => r.is_approved);
+              const isClosed = req.status === 'closed';
+
+              let statusLabel: string;
+              let StatusIcon: typeof CheckCircle2;
+              let statusStyles: string;
+
+              if (isClosed) {
+                statusLabel = 'Resolved';
+                StatusIcon = CheckCircle2;
+                statusStyles = 'text-slate-400 bg-slate-100';
+              } else if (hasApproved) {
+                statusLabel = 'Answer ready — tap to view';
+                StatusIcon = CheckCircle2;
+                statusStyles = 'text-amber-700 bg-amber-50';
+              } else {
+                statusLabel = 'Waiting for answer...';
+                StatusIcon = Clock;
+                statusStyles = 'text-slate-500 bg-slate-50';
+              }
+
+              return (
+                <Link key={req.id} href={`/senior/my-requests?id=${req.id}`} className="block">
+                  <div className="bg-white rounded-xl border-2 border-slate-200 p-4 active:bg-slate-50 transition-colors senior-card">
+                    <h3 className="font-bold text-slate-900 text-base mb-2 line-clamp-2 leading-snug">{req.title}</h3>
+                    <div className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full ${statusStyles}`}>
+                      <StatusIcon className="w-4 h-4" />
+                      <span>{statusLabel}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

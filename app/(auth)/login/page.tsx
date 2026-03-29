@@ -32,7 +32,6 @@ function LoginPageContent() {
   
   const [collegeStatus, setCollegeStatus] = useState<{ recognized: boolean; name: string | null } | null>(null);
 
-  // Validate college domain real-time for helper registration
   useEffect(() => {
     if (role === 'helper' && mode === 'register' && formData.email) {
       if (formData.email.includes('@')) {
@@ -51,7 +50,6 @@ function LoginPageContent() {
     e.preventDefault();
     setLoading(true);
 
-    // ─── Owner login (unchanged — OTP) ───
     if (isOwner) {
       try {
         const res = await fetch('/api/auth/owner-login', {
@@ -73,7 +71,6 @@ function LoginPageContent() {
       return;
     }
 
-    // ─── Helper LOGIN (password-based, no OTP) ───
     if (isHelper && mode === 'login') {
       try {
         const res = await fetch('/api/auth/helper-login', {
@@ -97,10 +94,8 @@ function LoginPageContent() {
       return;
     }
 
-    // ─── Helper REGISTER (send OTP first, then verify + create account) ───
     if (isHelper && mode === 'register') {
       try {
-        // Send OTP to verify the email is real
         const res = await fetch('/api/auth/helper-send-register-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -112,7 +107,6 @@ function LoginPageContent() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        // Store registration data for after OTP verification
         sessionStorage.setItem('linkage_helper_register', JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -131,7 +125,6 @@ function LoginPageContent() {
       return;
     }
 
-    // ─── Senior login/register (OTP-based, completely unchanged) ───
     try {
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -171,45 +164,45 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-      <div className="w-full max-w-md space-y-4">
-        {/* Role switcher — only show when not owner */}
+    <div className="min-h-screen flex flex-col justify-center p-4 bg-slate-50">
+      <div className="w-full max-w-md mx-auto space-y-4">
+        {/* Role switcher */}
         {!isOwner && (
-          <div className="flex rounded-xl p-1 bg-white shadow-sm border border-gray-200 font-medium text-sm">
+          <div className="flex rounded-xl p-1 bg-white shadow-sm border border-slate-200 font-medium text-sm">
             <button
               type="button"
-              className={`flex-1 py-2.5 rounded-lg transition-all ${
+              className={`flex-1 py-3 rounded-lg transition-all font-bold ${
                 role === 'senior'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
               onClick={() => router.push('/login?role=senior')}
             >
-              👴 I Need Help
+              I Need Help
             </button>
             <button
               type="button"
-              className={`flex-1 py-2.5 rounded-lg transition-all ${
+              className={`flex-1 py-3 rounded-lg transition-all font-bold ${
                 role === 'helper'
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
               onClick={() => router.push('/login?role=helper')}
             >
-              🎓 I Want to Help
+              I Want to Help
             </button>
           </div>
         )}
 
-      <Card className="w-full shadow-lg border-gray-200">
+      <Card className="w-full shadow-lg border-slate-200">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <h1 className="text-3xl font-bold text-indigo-600 tracking-tight">🔗 LinkAge</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">LinkAge</h1>
           </div>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-2xl text-slate-900">
             {isOwner ? 'Admin Login' : mode === 'login' ? 'Welcome Back' : 'Create an Account'}
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-slate-500">
             {isOwner 
               ? 'Enter your admin email to proceed.'
               : role === 'senior' 
@@ -223,14 +216,14 @@ function LoginPageContent() {
             <div className="flex rounded-md p-1 bg-slate-100 mb-6 font-medium text-sm">
               <button 
                 type="button"
-                className={`flex-1 py-2 rounded ${mode === 'login' ? `bg-white shadow-sm ${isHelper ? 'text-teal-600' : 'text-orange-600'}` : 'text-slate-500'}`}
+                className={`flex-1 py-2 rounded ${mode === 'login' ? 'bg-white shadow-sm text-amber-600' : 'text-slate-500'}`}
                 onClick={() => setMode('login')}
               >
                 Login
               </button>
               <button 
                 type="button"
-                className={`flex-1 py-2 rounded ${mode === 'register' ? `bg-white shadow-sm ${isHelper ? 'text-teal-600' : 'text-orange-600'}` : 'text-slate-500'}`}
+                className={`flex-1 py-2 rounded ${mode === 'register' ? 'bg-white shadow-sm text-amber-600' : 'text-slate-500'}`}
                 onClick={() => setMode('register')}
               >
                 Register
@@ -241,21 +234,21 @@ function LoginPageContent() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && !isOwner && (
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name" className="text-slate-700">Full Name</Label>
                 <Input 
                   id="name" 
                   autoComplete="name"
                   placeholder="John Doe" 
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="text-base py-6"
+                  className="text-base py-6 border-slate-200"
                   required 
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-slate-700">Email Address</Label>
               <Input 
                 id="email" 
                 type="email" 
@@ -263,26 +256,25 @@ function LoginPageContent() {
                 placeholder={role === 'helper' && mode === 'register' ? 'student@college.edu' : 'you@example.com'} 
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="text-base py-6"
+                className="text-base py-6 border-slate-200"
                 required 
               />
               {role === 'helper' && mode === 'register' && (
                 <div className="mt-1 text-sm">
                   {collegeStatus === null ? (
-                     <span className="text-slate-500">Must be a recognized institution email.</span>
+                     <span className="text-slate-400">Must be a recognized institution email.</span>
                   ) : collegeStatus.recognized ? (
-                     <span className="text-green-600 font-medium">✅ College recognized: {collegeStatus.name}</span>
+                     <span className="text-amber-600 font-medium">College recognized: {collegeStatus.name}</span>
                   ) : (
-                     <span className="text-red-500 font-medium">❌ Not a recognized college email.</span>
+                     <span className="text-red-500 font-medium">Not a recognized college email.</span>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Password field — ONLY for helpers */}
             {isHelper && (
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-slate-700">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -291,14 +283,14 @@ function LoginPageContent() {
                     placeholder={mode === 'register' ? 'Choose a strong password' : 'Enter your password'}
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="text-base py-6 pr-12"
+                    className="text-base py-6 pr-12 border-slate-200"
                     required
                     minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -311,7 +303,7 @@ function LoginPageContent() {
 
             {mode === 'register' && role === 'senior' && !isOwner && (
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                <Label htmlFor="phone" className="text-slate-700">Phone Number (Optional)</Label>
                 <Input 
                   id="phone" 
                   type="tel" 
@@ -319,19 +311,19 @@ function LoginPageContent() {
                   placeholder="+1 (555) 000-0000" 
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="text-base py-6"
+                  className="text-base py-6 border-slate-200"
                 />
               </div>
             )}
 
             {mode === 'register' && !isOwner && (
                <div className="space-y-2">
-                 <Label htmlFor="language">Preferred Language</Label>
+                 <Label htmlFor="language" className="text-slate-700">Preferred Language</Label>
                  <Select 
                    value={formData.language_preference} 
                    onValueChange={(val) => setFormData({...formData, language_preference: val || 'english'})}
                  >
-                   <SelectTrigger className="text-base py-6">
+                   <SelectTrigger className="text-base py-6 border-slate-200">
                      <SelectValue placeholder="Select Language" />
                    </SelectTrigger>
                    <SelectContent>
@@ -350,7 +342,7 @@ function LoginPageContent() {
 
             <Button 
               type="submit" 
-              className={`w-full text-lg py-6 mt-4 ${role === 'senior' ? 'bg-orange-600 hover:bg-orange-700' : role === 'helper' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-purple-600 hover:bg-purple-700'}`}
+              className="w-full text-lg h-14 mt-4 bg-amber-600 active:bg-amber-700 font-extrabold rounded-xl"
               disabled={loading || !isFormValid()}
             >
               {loading 
@@ -365,21 +357,19 @@ function LoginPageContent() {
             </Button>
           </form>
 
-          {/* Forgot password link — ONLY for helpers in login mode */}
           {isHelper && mode === 'login' && (
             <div className="text-center mt-4">
               <Link
                 href="/forgot-password"
-                className="text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                className="text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors"
               >
                 Forgot your password?
               </Link>
             </div>
           )}
 
-          {/* Helper register note */}
           {isHelper && mode === 'register' && (
-            <p className="text-xs text-gray-500 text-center mt-4">
+            <p className="text-xs text-slate-400 text-center mt-4">
               We&apos;ll send a verification code to your college email to confirm it&apos;s you.
             </p>
           )}
@@ -392,7 +382,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-slate-400">Loading...</p></div>}>
       <LoginPageContent />
     </Suspense>
   );

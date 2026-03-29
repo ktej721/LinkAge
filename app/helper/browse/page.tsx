@@ -11,7 +11,6 @@ export default function BrowseRequestsPage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Filters
   const [language, setLanguage] = useState<string>('all');
   const [category, setCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,15 +20,14 @@ export default function BrowseRequestsPage() {
       setLoading(true);
       try {
         const url = new URL('/api/requests', window.location.origin);
-        // We fetch all open and filter client-side for better UX in this small app
-        // Or we can pass language to API. Let's filter client-side.
+        url.searchParams.set('status', 'open');
         const res = await fetch(url.toString());
         const json = await res.json();
         if (json.data) {
           setRequests(json.data);
         }
       } catch (error) {
-        console.error('Failed to fetch requests', error);
+        // Silently handle fetch error
       } finally {
         setLoading(false);
       }
@@ -50,31 +48,32 @@ export default function BrowseRequestsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Browse Requests</h1>
-          <p className="text-gray-500 mt-1">
-            {!loading && <span className="font-semibold text-teal-600">{filteredRequests.length}</span>} open requests waiting for help
+          <h1 className="text-2xl font-bold text-slate-900">Browse Requests</h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            {!loading && <span className="font-semibold text-amber-600">{filteredRequests.length}</span>} open requests waiting for help
           </p>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group space-y-3">
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-rose-50/50 mix-blend-overlay"></div>
+        <div className="flex-1 relative z-10">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500" />
           <Input 
             placeholder="Search keywords..." 
-            className="pl-9"
+            className="pl-10 border-white/50 bg-white/50 backdrop-blur-md h-12 text-base shadow-inner focus-visible:ring-amber-500/50"
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           />
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-3 relative z-10 w-full">
           <Select value={language} onValueChange={(val) => setLanguage(val || 'all')}>
-            <SelectTrigger className="w-[140px] capitalize">
+            <SelectTrigger className="flex-1 capitalize border-white/50 bg-white/50 backdrop-blur-md h-11 shadow-inner focus:ring-amber-500/50 transition-colors">
               <SelectValue placeholder="Language" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="border-white/20 bg-white/80 backdrop-blur-xl">
               <SelectItem value="all">All Languages</SelectItem>
               <SelectItem value="english">English</SelectItem>
               <SelectItem value="hindi">Hindi</SelectItem>
@@ -88,10 +87,10 @@ export default function BrowseRequestsPage() {
           </Select>
 
           <Select value={category} onValueChange={(val) => setCategory(val || 'all')}>
-            <SelectTrigger className="w-[160px] capitalize">
+            <SelectTrigger className="flex-1 capitalize border-white/50 bg-white/50 backdrop-blur-md h-11 shadow-inner focus:ring-amber-500/50 transition-colors">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="border-white/20 bg-white/80 backdrop-blur-xl">
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="technology">Technology</SelectItem>
               <SelectItem value="health">Health</SelectItem>
@@ -108,16 +107,16 @@ export default function BrowseRequestsPage() {
       {/* List */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-          <p className="text-gray-500">Finding requests...</p>
+          <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
+          <p className="text-slate-500">Finding requests...</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-          <p className="text-lg font-medium text-gray-900">No matching requests found.</p>
-          <p className="text-gray-500 mt-1">Try adjusting your filters.</p>
+        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+          <p className="text-lg font-medium text-slate-900">No matching requests found.</p>
+          <p className="text-slate-500 mt-1">Try adjusting your filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-3">
           {filteredRequests.map(req => (
             <RequestCard key={req.id} request={req} viewAs="helper" />
           ))}

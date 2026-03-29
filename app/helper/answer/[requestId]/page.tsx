@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import VideoRecorder from '@/components/VideoRecorder';
-import { Globe, Loader2, Video, FileText, UserCircle2, Phone } from 'lucide-react';
+import { Globe, Loader2, Video, FileText, UserCircle2, Phone, Mic } from 'lucide-react';
 import Link from 'next/link';
 import { Request } from '@/types';
 
@@ -18,27 +18,17 @@ export default function AnswerRequestPage() {
 
   const [request, setRequest] = useState<Request | null>(null);
   const [signedAudioUrl, setSignedAudioUrl] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoTextSummary, setVideoTextSummary] = useState('');
   const [textContent, setTextContent] = useState('');
 
   useEffect(() => {
-    // We need current user to know if they are KYC verified
-    const fetchUserAndRequest = async () => {
+    const fetchRequest = async () => {
       try {
-        // Fetch current user from session endpoint if we had one, 
-        // Or we can rely on catching 401. But to selectively show UI, we need user object.
-        // We'll decode the JWT or create a quick /api/auth/me if needed, 
-        // but we can also just fetch the request and assume the text tab submission will fail if not KYC.
-        // Actually, we can check localStorage or add a small check in the API, but let's just show it and let server validate,
-        // OR better, we know user from cookies, but this is a client component. 
-        // For simplicity, we'll try to get user data if we had an endpoint. Since we don't, 
-        // we will fetch the request and look at the layout passing user, but Next.js app router doesn't easily pass it to deeply nested client components unless through context.
-        // Let's just fetch the request for now.
         const res = await fetch(`/api/requests/${requestId}`);
         const json = await res.json();
         
@@ -56,8 +46,8 @@ export default function AnswerRequestPage() {
             if (audioRes.ok && audioJson.signedUrl) {
               setSignedAudioUrl(audioJson.signedUrl);
             }
-          } catch (err) {
-            console.error('Failed to fetch signed audio URL:', err);
+          } catch {
+            // Audio URL fetch failed — non-critical
           }
         }
       } catch (error: any) {
@@ -67,16 +57,12 @@ export default function AnswerRequestPage() {
       }
     };
 
-    fetchUserAndRequest();
+    fetchRequest();
   }, [requestId]);
 
   const uploadVideo = async (blob: Blob): Promise<string | null> => {
     try {
-      console.log('[uploadVideo] Starting upload, blob size:', blob.size, 'type:', blob.type);
-      
-      // Detect the actual file type and name
       const blobType = blob.type || 'video/webm';
-      // If the blob is a File (from file upload), use its name; otherwise default
       const fileName = (blob as File).name || 'response.webm';
       
       const response = await fetch('/api/responses/upload-url', {
@@ -85,7 +71,6 @@ export default function AnswerRequestPage() {
         body: JSON.stringify({ filename: fileName, contentType: blobType }),
       });
       const json = await response.json();
-      console.log('[uploadVideo] Upload URL response:', JSON.stringify(json));
 
       if (!response.ok || !json.signedUrl) {
         throw new Error(json.error || 'Failed to get upload URL');
@@ -93,7 +78,6 @@ export default function AnswerRequestPage() {
 
       const { path, signedUrl, token, contentType: resolvedContentType } = json;
       const uploadContentType = resolvedContentType || blobType || 'video/webm';
-      console.log('[uploadVideo] Got signed URL, uploading with contentType:', uploadContentType);
 
       const uploadRes = await fetch(signedUrl, {
         method: 'PUT',
@@ -106,13 +90,10 @@ export default function AnswerRequestPage() {
 
       if (!uploadRes.ok) {
         const errText = await uploadRes.text().catch(() => '');
-        console.error('[uploadVideo] PUT failed:', uploadRes.status, errText);
         throw new Error(`Upload failed (${uploadRes.status}): ${errText}`);
       }
-      console.log('[uploadVideo] Upload successful, path:', path);
       return path;
     } catch (error: any) {
-      console.error('Video upload error:', error);
       toast.error(error.message || 'Video upload failed');
       return null;
     }
@@ -136,7 +117,7 @@ export default function AnswerRequestPage() {
         body: JSON.stringify({
           request_id: requestId,
           video_url,
-          text_content: textContent,
+          text_content: videoTextSummary,
           response_type: 'video',
         }),
       });
@@ -187,139 +168,152 @@ export default function AnswerRequestPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
       </div>
     );
   }
 
-  if (!request) return <div className="text-center py-10">Request not found.</div>;
+  if (!request) return <div className="text-center py-10 text-slate-500">Request not found.</div>;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-6">
       {/* Request Details */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 font-medium">
-          <UserCircle2 className="w-5 h-5 text-orange-500" />
+      <div className="glass-card rounded-3xl p-6 relative overflow-hidden group border-white/60">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400 rounded-full mix-blend-multiply filter blur-[50px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
+        <div className="relative z-10">
+        <div className="flex items-center gap-2 text-sm text-slate-400 mb-4 font-medium">
+          <UserCircle2 className="w-5 h-5 text-amber-500" />
           <span>{request.senior?.name} asks:</span>
-          <span className="mx-2">•</span>
+          <span className="mx-2">·</span>
           <Globe className="w-4 h-4" />
           <span className="capitalize">{request.language}</span>
         </div>
         
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{request.title}</h1>
-        <p className="text-lg text-gray-700 whitespace-pre-wrap">{request.description}</p>
+        <h1 className="text-2xl font-bold text-slate-900 mb-3">{request.title}</h1>
+        <p className="text-base text-slate-600 whitespace-pre-wrap">{request.description}</p>
         
         {request.audio_url && (
-          <div className="mt-6 bg-red-50 rounded-xl p-4 border border-red-200">
-            <p className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2">
-              🎙️ This question was asked via voice recording
+          <div className="mt-5 bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <p className="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
+              <Mic className="w-4 h-4" />
+              Voice recording attached
             </p>
             {signedAudioUrl ? (
               <audio controls src={signedAudioUrl} className="w-full" />
             ) : (
-              <p className="text-sm text-gray-500 italic">Loading audio...</p>
+              <p className="text-sm text-slate-400 italic">Loading audio...</p>
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Answer Area */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Provide your answer</h2>
+      <div className="glass-panel rounded-3xl p-6 relative overflow-hidden shadow-2xl shadow-amber-900/5 border-white/60">
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-400 rounded-full mix-blend-multiply filter blur-[60px] opacity-10 pointer-events-none"></div>
+        <h2 className="text-lg font-bold text-slate-900 mb-6">Provide your answer</h2>
 
-        <Tabs defaultValue="video" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 mb-8 bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="video" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+        <Tabs defaultValue="video" className="w-full relative z-10">
+          <TabsList className="w-full grid grid-cols-3 mb-6 bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/60 shadow-inner">
+            <TabsTrigger value="video" className="rounded-xl py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-md transition-all">
               <Video className="w-4 h-4 mr-2 inline" /> Video
             </TabsTrigger>
-            <TabsTrigger value="text" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger value="text" className="rounded-xl py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-md transition-all">
               <FileText className="w-4 h-4 mr-2 inline" /> Text
             </TabsTrigger>
-            <TabsTrigger value="call" className="rounded-lg py-2.5 text-base font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsTrigger value="call" className="rounded-xl py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-md transition-all">
               <Phone className="w-4 h-4 mr-2 inline" /> Live Call
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="video" className="space-y-6">
-            <div className="bg-blue-50 text-blue-800 p-4 rounded-xl border border-blue-100 flex items-start gap-3 text-sm">
-              <div className="mt-0.5">ℹ️</div>
-              <p>For the best experience, record a short, clear video explaining the solution. <strong>Your video will be reviewed by our team before being shown to the senior.</strong></p>
+           <TabsContent value="video" className="space-y-5">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-100 text-sm">
+              Record a short, clear video explaining the solution. Your video will be reviewed before being shown to the senior.
             </div>
 
-            <form onSubmit={handleVideoSubmit} className="space-y-6">
-              <div className="flex justify-center border-2 border-dashed border-gray-200 rounded-2xl p-4 bg-slate-50">
-                <VideoRecorder onVideoBlob={setVideoBlob} maxDurationSeconds={180} />
+            <form onSubmit={handleVideoSubmit} className="space-y-5">
+              <div className="flex justify-center rounded-3xl p-1 bg-gradient-to-br from-amber-400 via-orange-500 to-rose-400">
+                <div className="flex justify-center w-full bg-white/90 backdrop-blur-md rounded-[1.35rem] p-4 text-center items-center h-full">
+                  <VideoRecorder onVideoBlob={setVideoBlob} maxDurationSeconds={180} />
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="block font-medium text-gray-700">Add a short text summary (Optional)</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-600">Text summary (optional)</label>
                 <Textarea 
-                  value={textContent}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTextContent(e.target.value)}
+                  value={videoTextSummary}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVideoTextSummary(e.target.value)}
                   placeholder="e.g., Here are the 3 steps I mentioned in the video..." 
-                  className="min-h-[100px] resize-y rounded-xl"
+                  className="min-h-[80px] resize-y rounded-2xl border-white/60 bg-white/50 backdrop-blur-sm shadow-inner focus-visible:ring-amber-500/50"
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                size="lg" 
-                disabled={submitting || !videoBlob} 
-                className="w-full text-lg py-6 rounded-xl bg-teal-600 hover:bg-teal-700"
-              >
-                {submitting ? 'Uploading...' : 'Submit Video Answer'}
-              </Button>
+              <div className="relative group/btn">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-rose-500 rounded-2xl blur-md opacity-40 group-hover/btn:opacity-80 transition-opacity"></div>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  disabled={submitting || !videoBlob} 
+                  className="w-full text-base h-16 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:to-rose-500 text-white font-extrabold shadow-xl border border-white/20 transition-all hover:scale-[1.02] relative z-10"
+                >
+                  {submitting ? 'Uploading...' : 'Submit Video Answer'}
+                </Button>
+              </div>
             </form>
           </TabsContent>
 
-          <TabsContent value="text" className="space-y-6">
-            <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl border border-emerald-100 flex items-start gap-3 text-sm">
-              <div className="mt-0.5">🔒</div>
-              <p>Written answers go live immediately to help seniors. Ensure your instructions are clear and easy to follow.</p>
+          <TabsContent value="text" className="space-y-5">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-100 text-sm">
+              Written answers go live immediately to help seniors. Make your instructions clear and easy to follow.
             </div>
 
-            <form onSubmit={handleTextSubmit} className="space-y-6">
-              <div className="space-y-3">
+            <form onSubmit={handleTextSubmit} className="space-y-5">
+              <div className="space-y-2">
                 <Textarea 
                   value={textContent}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTextContent(e.target.value)}
                   placeholder="Type your detailed, step-by-step answer here..." 
-                  className="min-h-[200px] text-lg p-5 rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  className="min-h-[200px] text-base p-5 rounded-3xl border-white/60 bg-white/50 backdrop-blur-sm shadow-inner focus-visible:ring-amber-500/50"
                   required
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                size="lg" 
-                disabled={submitting} 
-                className="w-full text-lg py-6 rounded-xl bg-teal-600 hover:bg-teal-700"
-              >
-                {submitting ? 'Submitting...' : 'Post Written Answer'}
-              </Button>
+              <div className="relative group/btn">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-rose-500 rounded-2xl blur-md opacity-40 group-hover/btn:opacity-80 transition-opacity"></div>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  disabled={submitting} 
+                  className="w-full text-base h-16 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:to-rose-500 text-white font-extrabold shadow-xl border border-white/20 transition-all hover:scale-[1.02] relative z-10"
+                >
+                  {submitting ? 'Submitting...' : 'Post Written Answer'}
+                </Button>
+              </div>
             </form>
           </TabsContent>
 
-          <TabsContent value="call" className="space-y-6">
-            <div className="bg-indigo-50 text-indigo-800 p-4 rounded-xl border border-indigo-100 flex items-start gap-3 text-sm">
-              <div className="mt-0.5">📹</div>
-              <p>Start a <strong>free live video call</strong> with the senior using Jitsi Meet. No accounts needed — just click and connect face-to-face in real time.</p>
+          <TabsContent value="call" className="space-y-5">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-100 text-sm">
+              Start a free live video call with the senior using Jitsi Meet. No accounts needed — just click and connect.
             </div>
 
-            <div className="text-center py-8 space-y-6">
-              <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                <Phone className="w-10 h-10 text-green-600" />
+            <div className="text-center py-8 space-y-5">
+              <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                <Phone className="w-8 h-8 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Ready to help live?</h3>
-                <p className="text-gray-600 max-w-sm mx-auto">The senior will receive a notification and can join the call instantly.</p>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Ready to help live?</h3>
+                <p className="text-slate-500 max-w-sm mx-auto text-sm">The senior will receive a notification and can join the call instantly.</p>
               </div>
-              <Link href={`/helper/call/${requestId}`}>
-                <Button size="lg" className="text-lg py-6 px-10 rounded-xl bg-green-600 hover:bg-green-700 gap-2">
+              <div className="relative group/btn call">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-rose-500 rounded-2xl blur-md opacity-40 group-hover/btn:opacity-80 transition-opacity"></div>
+              <Link href={`/helper/call/${requestId}`} className="block w-full relative z-10">
+                <Button size="lg" className="w-full text-base h-16 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:to-rose-500 text-white gap-2 font-extrabold shadow-xl border border-white/20 transition-all hover:scale-[1.02]">
                   <Phone className="w-5 h-5" />
                   Start Live Video Call
                 </Button>
               </Link>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -327,3 +321,4 @@ export default function AnswerRequestPage() {
     </div>
   );
 }
+
