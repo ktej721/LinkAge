@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -15,17 +15,12 @@ export async function POST(req: NextRequest) {
     const { email, token, new_password } = schema.parse(await req.json());
 
     // Find the reset token
-    const { data: resetToken, error: tokenErr } = await supabaseAdmin
-      .from('password_reset_tokens')
-      .select('*')
-      .eq('email', email)
-      .eq('token', token)
-      .eq('used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: { email, token, used: false },
+      orderBy: { created_at: 'desc' }
+    });
 
-    if (tokenErr || !resetToken) {
+    if (!resetToken) {
       return NextResponse.json(
         { error: 'Invalid or expired reset code. Please request a new one.' },
         { status: 400 }
@@ -44,13 +39,12 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(new_password, 12);
 
     // Update user's password
-    const { error: updateErr } = await supabaseAdmin
-      .from('users')
-      .update({ password_hash: passwordHash })
-      .eq('email', email)
-      .eq('role', 'helper');
-
-    if (updateErr) {
+    try {
+      await prisma.user.updateMany({
+        where: { email, role: 'helper' },
+        data: { password_hash: passwordHash }
+      });
+    } catch (updateErr) {
       return NextResponse.json(
         { error: 'Failed to update password.' },
         { status: 500 }
@@ -58,10 +52,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Mark token as used
-    await supabaseAdmin
-      .from('password_reset_tokens')
-      .update({ used: true })
-      .eq('id', resetToken.id);
+    await prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true }
+    });
 
     return NextResponse.json({
       success: true,

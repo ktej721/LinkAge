@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String  @id @default(uuid())
+  email               String  @unique
+  name                String
+  role                String // 'senior', 'helper', 'owner'
+  phone               String?
+  language_preference String? @default("english")
+  college_domain      String?
+  college_name        String?
+  is_email_verified   Boolean @default(false)
+  password_hash       String?
+  profile_picture_url String?
+  is_kyc_approved     Boolean @default(false)
+  kyc_document_url    String?
+  created_at          DateTime @default(now())
+
+  requests            Request[]
+  responses           Response[]
+  helper_points       HelperPoint[]
+  helper_streak       HelperStreak?
+  user_sessions       UserSession[]
+}
+
+model OtpToken {
+  id         String   @id @default(uuid())
+  email      String
+  otp        String
+  purpose    String?
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  email      String
+  token      String
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model UserSession {
+  id            String   @id @default(uuid())
+  user_id       String
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  session_token String   @unique
+  expires_at    DateTime
+  created_at    DateTime @default(now())
+}
+
+model Request {
+  id          String    @id @default(uuid())
+  senior_id   String
+  senior      User      @relation(fields: [senior_id], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  audio_url   String?
+  language    String    @default("english")
+  category    String    @default("general")
+  status      String    @default("open") // 'open', 'closed', 'resolved'
+  expires_at  DateTime?
+  created_at  DateTime  @default(now())
+
+  responses   Response[]
+}
+
+model Response {
+  id                 String   @id @default(uuid())
+  request_id         String
+  request            Request  @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  helper_id          String
+  helper             User     @relation(fields: [helper_id], references: [id], onDelete: Cascade)
+  video_url          String?
+  text_content       String?
+  call_url           String?
+  response_type      String   @default("text") // 'text', 'video', 'video_call'
+  is_kyc_response    Boolean  @default(false)
+  is_approved        Boolean  @default(false)
+  is_rejected        Boolean  @default(false)
+  accepted_by_senior Boolean  @default(false)
+  created_at         DateTime @default(now())
+}
+
+model HelperPoint {
+  id           String   @id @default(uuid())
+  helper_id    String
+  helper       User     @relation(fields: [helper_id], references: [id], onDelete: Cascade)
+  points       Int      @default(0)
+  reason       String
+  reference_id String?
+  created_at   DateTime @default(now())
+}
+
+model HelperStreak {
+  helper_id        String    @id
+  helper           User      @relation(fields: [helper_id], references: [id], onDelete: Cascade)
+  current_streak   Int       @default(0)
+  last_active_date DateTime?
+  longest_streak   Int       @default(0)
+}

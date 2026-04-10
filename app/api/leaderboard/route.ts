@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { getTierFromPoints } from '@/lib/tiers';
 import { HelperLeaderboardEntry } from '@/types';
@@ -15,26 +15,25 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const scope = searchParams.get('scope') || 'national';
 
-  // Base query: aggregate points per helper
-  let query = supabaseAdmin
-    .from('users')
-    .select(`
-      id,
-      name,
-      college_name,
-      college_domain,
-      profile_picture_url
-    `)
-    .eq('role', 'helper');
-
-  // If college scope, filter by current user's college_domain
+  const conditions: any = { role: 'helper' };
+  
   if (scope === 'college' && user.college_domain) {
-    query = query.eq('college_domain', user.college_domain);
+    conditions.college_domain = user.college_domain;
   }
 
-  const { data: helpers, error: helpersError } = await query;
-
-  if (helpersError) {
+  let helpers;
+  try {
+    helpers = await prisma.user.findMany({
+      where: conditions,
+      select: {
+        id: true,
+        name: true,
+        college_name: true,
+        college_domain: true,
+        profile_picture_url: true, // wait this is not in schema.prisma!
+      }
+    }); // Needs fixing schema
+  } catch (helpersError: any) {
     return NextResponse.json({ error: helpersError.message }, { status: 500 });
   }
 
@@ -45,32 +44,31 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const helperIds = helpers.map(h => h.id);
+  const helperIds = helpers.map((h: any) => h.id);
 
   // Get total points for each helper
-  const { data: pointsData } = await supabaseAdmin
-    .from('helper_points')
-    .select('helper_id, points')
-    .in('helper_id', helperIds);
+  const pointsData = await prisma.helperPoint.findMany({
+    where: { helper_id: { in: helperIds } },
+    select: { helper_id: true, points: true }
+  });
 
   // Get accepted counts
-  const { data: acceptedData } = await supabaseAdmin
-    .from('responses')
-    .select('helper_id')
-    .in('helper_id', helperIds)
-    .eq('accepted_by_senior', true);
+  const acceptedData = await prisma.response.findMany({
+    where: { helper_id: { in: helperIds }, accepted_by_senior: true },
+    select: { helper_id: true }
+  });
 
   // Get total response counts
-  const { data: responseData } = await supabaseAdmin
-    .from('responses')
-    .select('helper_id')
-    .in('helper_id', helperIds);
+  const responseData = await prisma.response.findMany({
+    where: { helper_id: { in: helperIds } },
+    select: { helper_id: true }
+  });
 
   // Get streaks
-  const { data: streakData } = await supabaseAdmin
-    .from('helper_streaks')
-    .select('helper_id, current_streak')
-    .in('helper_id', helperIds);
+  const streakData = await prisma.helperStreak.findMany({
+    where: { helper_id: { in: helperIds } },
+    select: { helper_id: true, current_streak: true }
+  });
 
   // Aggregate
   const pointsByHelper: Record<string, number> = {};
@@ -78,24 +76,24 @@ export async function GET(req: NextRequest) {
   const responsesByHelper: Record<string, number> = {};
   const streakByHelper: Record<string, number> = {};
 
-  pointsData?.forEach(p => {
+  pointsData?.forEach((p: any) => {
     pointsByHelper[p.helper_id] = (pointsByHelper[p.helper_id] || 0) + p.points;
   });
 
-  acceptedData?.forEach(a => {
+  acceptedData?.forEach((a: any) => {
     acceptedByHelper[a.helper_id] = (acceptedByHelper[a.helper_id] || 0) + 1;
   });
 
-  responseData?.forEach(r => {
+  responseData?.forEach((r: any) => {
     responsesByHelper[r.helper_id] = (responsesByHelper[r.helper_id] || 0) + 1;
   });
 
-  streakData?.forEach(s => {
+  streakData?.forEach((s: any) => {
     streakByHelper[s.helper_id] = s.current_streak;
   });
 
   // Build leaderboard entries
-  let entries: HelperLeaderboardEntry[] = helpers.map(h => {
+  let entries: HelperLeaderboardEntry[] = helpers.map((h: any) => {
     const totalPoints = pointsByHelper[h.id] || 0;
     return {
       rank: 0,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { createSession } from '@/lib/auth';
 import { isCollegeEmail, getCollegeName } from '@/lib/college-domains';
 import { sendWelcomeEmail } from '@/lib/mailer';
@@ -21,16 +21,15 @@ export async function POST(req: NextRequest) {
     const data = schema.parse(await req.json());
 
     // 1. Verify OTP first
-    const { data: token, error: tokenError } = await supabaseAdmin
-      .from('otp_tokens')
-      .select('*')
-      .eq('email', data.email)
-      .eq('used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    const token = await prisma.otpToken.findFirst({
+      where: {
+        email: data.email,
+        used: false,
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
-    if (tokenError || !token) {
+    if (!token) {
       return NextResponse.json(
         { error: 'No active verification code found. Please request a new one.' },
         { status: 400 }
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Mark OTP as used
-    await supabaseAdmin.from('otp_tokens').update({ used: true }).eq('id', token.id);
+    await prisma.otpToken.update({ where: { id: token.id }, data: { used: true } });
 
     // 2. Validate college email
     if (!isCollegeEmail(data.email)) {
@@ -68,11 +67,10 @@ export async function POST(req: NextRequest) {
     const collegeDomain = data.email.split('@')[1];
 
     // 4. Check if user already exists (from old OTP registration)
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id, role, password_hash')
-      .eq('email', data.email)
-      .single();
+    const existingUser = await prisma.user.findFirst({
+      where: { email: data.email },
+      select: { id: true, role: true, password_hash: true }
+    });
 
     let userId: string;
 
@@ -85,16 +83,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { error: updateErr } = await supabaseAdmin
-        .from('users')
-        .update({
-          password_hash: passwordHash,
-          name: data.name,
-          is_email_verified: true,
-        })
-        .eq('id', existingUser.id);
-
-      if (updateErr) {
+      try {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            password_hash: passwordHash,
+            name: data.name,
+            is_email_verified: true,
+          }
+        });
+      } catch (updateErr: any) {
         console.error('[helper-register] Update error:', updateErr);
         return NextResponse.json(
           { error: updateErr.message || 'Failed to update account.' },
@@ -105,31 +103,28 @@ export async function POST(req: NextRequest) {
       userId = existingUser.id;
     } else {
       // Create new user
-      const { data: newUser, error: insertErr } = await supabaseAdmin
-        .from('users')
-        .insert({
-          email: data.email,
-          name: data.name,
-          role: 'helper',
-          phone: data.phone || null,
-          language_preference: data.language_preference || 'english',
-          college_domain: collegeDomain,
-          college_name: collegeName,
-          is_email_verified: true,
-          password_hash: passwordHash,
-        })
-        .select()
-        .single();
-
-      if (insertErr) {
+      try {
+        const newUser = await prisma.user.create({
+          data: {
+            email: data.email,
+            name: data.name,
+            role: 'helper',
+            phone: data.phone || null,
+            language_preference: data.language_preference || 'english',
+            college_domain: collegeDomain,
+            college_name: collegeName,
+            is_email_verified: true,
+            password_hash: passwordHash,
+          }
+        });
+        userId = newUser.id;
+      } catch (insertErr: any) {
         console.error('[helper-register] Insert error:', insertErr);
         return NextResponse.json(
           { error: insertErr.message || 'Failed to create account.' },
           { status: 500 }
         );
       }
-
-      userId = newUser.id;
 
       // Send welcome email (fire-and-forget)
       sendWelcomeEmail(data.email, data.name, 'helper').catch(console.error);

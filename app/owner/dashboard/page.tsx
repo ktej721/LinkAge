@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Users, FileQuestion, MessageSquare, Video, ShieldAlert } from 'lucide-react';
@@ -11,17 +11,17 @@ export default async function OwnerDashboard() {
   if (!user) return null;
 
   const [
-    { count: seniorsCount },
-    { count: helpersCount },
-    { count: totalRequests },
-    { count: openRequests },
-    { count: pendingReviews }
+    seniorsCount,
+    helpersCount,
+    totalRequests,
+    openRequests,
+    pendingReviews
   ] = await Promise.all([
-    supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).eq('role', 'senior'),
-    supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).eq('role', 'helper'),
-    supabaseAdmin.from('requests').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-    supabaseAdmin.from('responses').select('*', { count: 'exact', head: true }).eq('response_type', 'video').eq('is_approved', false).eq('is_rejected', false),
+    prisma.user.count({ where: { role: 'senior' } }),
+    prisma.user.count({ where: { role: 'helper' } }),
+    prisma.request.count(),
+    prisma.request.count({ where: { status: 'open' } }),
+    prisma.response.count({ where: { response_type: 'video', is_approved: false, is_rejected: false } }),
   ]);
 
   return (

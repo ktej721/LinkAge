@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { awardPoints } from '@/lib/award-points';
+import { getSignedVideoUrl } from '@/lib/get-signed-url';
 
 // GET: All pending video responses for review — with signed video URLs
 export async function GET(req: NextRequest) {
@@ -10,19 +11,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('responses')
-    .select(`
-      *,
-      helper:users!responses_helper_id_fkey(id, name, email, college_name, college_domain),
-      request:requests(id, title, description, language, senior:users!requests_senior_id_fkey(name))
-    `)
-    .eq('is_approved', false)
-    .eq('is_rejected', false)
-    .eq('response_type', 'video')
-    .order('created_at', { ascending: false });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const data = await prisma.response.findMany({
+    where: {
+      is_approved: false,
+      is_rejected: false,
+      response_type: 'video'
+    },
+    include: {
+      helper: { select: { id: true, name: true, email: true, college_name: true, college_domain: true } },
+      request: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          language: true,
+          senior: { select: { name: true } }
+        }
+      }
+    },
+    orderBy: { created_at: 'desc' }
+  });
 
   // Generate signed URLs server-side using the service role key
   const enhanced = await Promise.all(
@@ -34,45 +42,19 @@ export async function GET(req: NextRequest) {
         const normalizedPath = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath;
         
         console.log(`[admin/review] Generating signed URL for response ${item.id}, video_url: "${rawPath}", normalized: "${normalizedPath}"`);
-        
         // Try the normalized path first
         try {
-          const { data: urlData, error: signError } = await supabaseAdmin.storage
-            .from('response-videos')
-            .createSignedUrl(normalizedPath, 3600); // 1 hour expiry
-          
-          if (signError) {
-            console.error(`[admin/review] Sign error for "${normalizedPath}":`, signError.message);
-          } else {
-            signed_video = urlData?.signedUrl || null;
-          }
+          signed_video = await getSignedVideoUrl(normalizedPath);
         } catch (err: any) {
           console.error(`[admin/review] Exception signing video for ${item.id}:`, err.message);
         }
         
-        // If the first attempt failed, try the raw path as-is (in case it was stored differently)
+        // If the first attempt failed, try the raw path as-is
         if (!signed_video && normalizedPath !== rawPath) {
           try {
-            const { data: urlData2 } = await supabaseAdmin.storage
-              .from('response-videos')
-              .createSignedUrl(rawPath, 3600);
-            signed_video = urlData2?.signedUrl || null;
+            signed_video = await getSignedVideoUrl(rawPath);
           } catch (err: any) {
             console.error(`[admin/review] Fallback sign also failed for ${item.id}:`, err.message);
-          }
-        }
-        
-        // If still null, try listing to see if file exists
-        if (!signed_video) {
-          // Extract folder and file from path
-          const lastSlash = normalizedPath.lastIndexOf('/');
-          if (lastSlash > 0) {
-            const folder = normalizedPath.substring(0, lastSlash);
-            const fileName = normalizedPath.substring(lastSlash + 1);
-            const { data: listData } = await supabaseAdmin.storage
-              .from('response-videos')
-              .list(folder, { limit: 10 });
-            console.log(`[admin/review] Files in "${folder}":`, listData?.map(f => f.name) || 'none');
           }
         }
         
@@ -112,25 +94,26 @@ export async function POST(req: NextRequest) {
     updateData.rejection_reason = rejection_reason || 'Does not meet quality standards.';
   }
 
-  const { data: response, error } = await supabaseAdmin
-    .from('responses')
-    .update(updateData)
-    .eq('id', response_id)
-    .select('request_id, helper_id')
-    .single();
+  try {
+    const response = await prisma.response.update({
+      where: { id: response_id },
+      data: updateData,
+      select: { request_id: true, helper_id: true }
+    });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // If approved, mark the request as answered
+    if (action === 'approve') {
+      await prisma.request.update({
+        where: { id: response.request_id },
+        data: { status: 'answered' }
+      });
 
-  // If approved, mark the request as answered
-  if (action === 'approve') {
-    await supabaseAdmin
-      .from('requests')
-      .update({ status: 'answered' })
-      .eq('id', response.request_id);
+      // Award +15 points to helper for approved video response
+      await awardPoints(response.helper_id, 15, 'response_approved', response_id);
+    }
 
-    // Award +15 points to helper for approved video response
-    await awardPoints(response.helper_id, 15, 'response_approved', response_id);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true });
 }

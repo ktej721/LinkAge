@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { sendOTPEmail, generateOTP } from '@/lib/mailer';
 import { isCollegeEmail, getCollegeName } from '@/lib/college-domains';
 import { z } from 'zod';
@@ -37,31 +37,31 @@ export async function POST(req: NextRequest) {
       const collegeName = data.role === 'helper' ? getCollegeName(data.email) : null;
       const collegeDomain = data.role === 'helper' ? data.email.split('@')[1] : null;
 
-      const { data: existingUser } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('email', data.email)
-        .single();
+      const existingUser = await prisma.user.findFirst({
+        where: { email: data.email },
+        select: { id: true }
+      });
 
       if (!existingUser) {
-        await supabaseAdmin.from('users').insert({
-          email: data.email,
-          name: data.name,
-          role: data.role,
-          phone: data.phone,
-          language_preference: data.language_preference || 'english',
-          college_domain: collegeDomain,
-          college_name: collegeName,
-          is_email_verified: false,
+        await prisma.user.create({
+          data: {
+            email: data.email,
+            name: data.name,
+            role: data.role,
+            phone: data.phone,
+            language_preference: data.language_preference || 'english',
+            college_domain: collegeDomain,
+            college_name: collegeName,
+            is_email_verified: false,
+          }
         });
       }
     } else {
       // Login: user must exist
-      const { data: user } = await supabaseAdmin
-        .from('users')
-        .select('id, role')
-        .eq('email', data.email)
-        .single();
+      const user = await prisma.user.findFirst({
+        where: { email: data.email },
+        select: { id: true, role: true }
+      });
 
       if (!user) {
         return NextResponse.json({ error: 'No account found with this email. Please register first.' }, { status: 404 });
@@ -69,11 +69,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Invalidate previous OTPs
-    await supabaseAdmin
-      .from('otp_tokens')
-      .update({ used: true })
-      .eq('email', data.email)
-      .eq('used', false);
+    await prisma.otpToken.updateMany({
+      where: { email: data.email, used: false },
+      data: { used: true }
+    });
 
     // Generate and store OTP
     const otp = generateOTP();
@@ -81,14 +80,16 @@ export async function POST(req: NextRequest) {
 
     console.log('[send-otp] Generated OTP:', otp, 'for:', data.email, 'expires:', expiresAt);
 
-    const { error: insertError } = await supabaseAdmin.from('otp_tokens').insert({
-      email: data.email,
-      otp,
-      purpose: data.is_new_user ? 'register' : 'login',
-      expires_at: expiresAt,
-    });
-
-    if (insertError) {
+    try {
+      await prisma.otpToken.create({
+        data: {
+          email: data.email,
+          otp,
+          purpose: data.is_new_user ? 'register' : 'login',
+          expires_at: new Date(expiresAt),
+        }
+      });
+    } catch (insertError) {
       console.error('[send-otp] Failed to insert OTP:', insertError);
       return NextResponse.json({ error: 'Failed to generate OTP. Database error.' }, { status: 500 });
     }

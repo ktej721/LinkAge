@@ -1,30 +1,35 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 function SeniorCallContent() {
   const searchParams = useSearchParams();
   const roomUrl = searchParams.get('url') || '';
-  const router = useRouter();
-
-  const [activeCallCode, setActiveCallCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (roomUrl) {
-      // Extract the Jitsi code assuming https://meet.jit.si/CODE format
+      // Extract the Jitsi code
       const codeMatch = roomUrl.split('meet.jit.si/');
       if (codeMatch.length > 1) {
-        setActiveCallCode(codeMatch[1].split('#')[0]);
+        const activeCallCode = codeMatch[1].split('#')[0];
+        
+        const origin = window.location.origin;
+        const jitsiConfigMap = [
+          'userInfo.displayName="Senior"',
+          'config.startWithVideoMuted=false',
+          'config.startWithAudioMuted=false',
+          `config.postLogoutUrl="${origin}/senior/dashboard"`
+        ].join('&');
+        
+        // Wait a small moment, then redirect natively to Jitsi room to avoid mobile browser WebRTC/Cookie blocks
+        setTimeout(() => {
+          window.location.href = `https://meet.jit.si/${activeCallCode}#${jitsiConfigMap}`;
+        }, 500);
       }
     }
   }, [roomUrl]);
-
-  const handleLeaveCall = () => {
-    // If they manually click our red End Call button
-    router.push('/senior/dashboard');
-  };
 
   if (!roomUrl) {
     return (
@@ -44,41 +49,6 @@ function SeniorCallContent() {
     );
   }
 
-  if (activeCallCode) {
-    const jitsiConfigMap = [
-      'userInfo.displayName="Senior"',
-      'config.startWithVideoMuted=false',
-      'config.startWithAudioMuted=false',
-      'config.prejoinPageEnabled=false',
-      'config.disableDeepLinking=true',
-      // Hide Jitsi's internal hangup button so user must use our Leave Call button
-      `config.toolbarButtons=["camera","chat","desktop","fullscreen","microphone","profile","raisehand","settings","tileview","videoquality"]`
-    ].join('&');
-
-    const iframeSrc = `https://meet.jit.si/${activeCallCode}#${jitsiConfigMap}`;
-
-    return (
-      <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-        <div className="flex justify-between items-center p-4 bg-slate-900 text-white relative z-10">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold truncate">Live Video Call</h1>
-          </div>
-          <button onClick={handleLeaveCall} className="bg-red-600 hover:bg-red-700 active:bg-red-800 px-6 py-3 rounded-2xl font-bold transition-colors senior-btn ring-4 ring-red-900">
-            End Call
-          </button>
-        </div>
-        <div className="flex-1 w-full bg-black relative">
-          <iframe 
-            src={iframeSrc}
-            allow="camera; microphone; fullscreen; display-capture; autoplay"
-            className="w-full h-full border-0 absolute inset-0"
-            title="Live Video Call"
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white text-center p-8">
       <div className="max-w-lg mx-auto space-y-8">
@@ -89,7 +59,7 @@ function SeniorCallContent() {
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-5xl font-bold">Connecting you...</h1>
           <p className="text-gray-300 text-xl">
-            Please allow camera and microphone access when prompted.
+            Entering the secure video room.
           </p>
         </div>
 

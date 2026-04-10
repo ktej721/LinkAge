@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import RequestCard from '@/components/RequestCard';
 import AcceptSolutionButton from '@/components/AcceptSolutionButton';
 import { getSignedAudioUrl, getSignedVideoUrl } from '@/lib/get-signed-url';
@@ -47,23 +47,23 @@ export default async function MyRequestsPage({
   const user = await getSession();
   if (!user) return null;
 
-  const { data: requests } = await supabaseAdmin
-    .from('requests')
-    .select(
-      `*,
-      responses(
-        *,
-        helper:users!responses_helper_id_fkey(name, college_name)
-      )`
-    )
-    .eq('senior_id', user.id)
-    .order('created_at', { ascending: false });
+  const requests = await prisma.request.findMany({
+    where: { senior_id: user.id },
+    include: {
+      responses: {
+        include: {
+          helper: { select: { name: true, college_name: true } }
+        }
+      }
+    },
+    orderBy: { created_at: 'desc' },
+  });
 
   const activeRequestId = searchParams.id;
 
   let activeRequestWithUrls: any = null;
   if (activeRequestId && requests) {
-    const req = requests.find((r) => r.id === activeRequestId);
+    const req = requests.find((r: any) => r.id === activeRequestId);
     if (req) {
       activeRequestWithUrls = { ...req };
       if (req.audio_url) {
@@ -233,7 +233,7 @@ export default async function MyRequestsPage({
         </div>
       ) : (
         <div className="space-y-3">
-          {requests?.map((req) => (
+          {requests?.map((req: any) => (
             <div key={req.id}>
               <RequestCard request={req as any} viewAs="senior" />
             </div>

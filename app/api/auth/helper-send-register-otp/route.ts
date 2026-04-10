@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { sendOTPEmail, generateOTP } from '@/lib/mailer';
 import { isCollegeEmail } from '@/lib/college-domains';
 import { z } from 'zod';
@@ -32,11 +32,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user already exists WITH a password (fully registered helper)
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id, role, password_hash')
-      .eq('email', data.email)
-      .single();
+    const existingUser = await prisma.user.findFirst({
+      where: { email: data.email },
+      select: { id: true, role: true, password_hash: true }
+    });
 
     if (existingUser && existingUser.password_hash) {
       return NextResponse.json(
@@ -46,11 +45,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Invalidate previous OTPs for this email
-    await supabaseAdmin
-      .from('otp_tokens')
-      .update({ used: true })
-      .eq('email', data.email)
-      .eq('used', false);
+    await prisma.otpToken.updateMany({
+      where: { email: data.email, used: false },
+      data: { used: true }
+    });
 
     // Generate and store OTP
     const otp = generateOTP();
@@ -58,14 +56,16 @@ export async function POST(req: NextRequest) {
 
     console.log('[helper-send-register-otp] OTP:', otp, 'for:', data.email);
 
-    const { error: insertError } = await supabaseAdmin.from('otp_tokens').insert({
-      email: data.email,
-      otp,
-      purpose: 'helper_register',
-      expires_at: expiresAt,
-    });
-
-    if (insertError) {
+    try {
+      await prisma.otpToken.create({
+        data: {
+          email: data.email,
+          otp,
+          purpose: 'helper_register',
+          expires_at: new Date(expiresAt),
+        }
+      });
+    } catch (insertError: any) {
       console.error('[helper-send-register-otp] Insert error:', insertError);
       return NextResponse.json(
         { error: 'Failed to generate OTP.' },

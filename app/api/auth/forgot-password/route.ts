@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { sendOTPEmail, generateOTP } from '@/lib/mailer';
 import { z } from 'zod';
 import crypto from 'crypto';
@@ -14,12 +14,10 @@ export async function POST(req: NextRequest) {
     const { email } = schema.parse(await req.json());
 
     // Find the helper
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, name, role')
-      .eq('email', email)
-      .eq('role', 'helper')
-      .single();
+    const user = await prisma.user.findFirst({
+      where: { email, role: 'helper' },
+      select: { id: true, name: true, role: true }
+    });
 
     if (!user) {
       // Don't reveal if user exists or not for security — but for hackathon, be helpful
@@ -34,17 +32,18 @@ export async function POST(req: NextRequest) {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutes
 
     // Invalidate previous reset tokens
-    await supabaseAdmin
-      .from('password_reset_tokens')
-      .update({ used: true })
-      .eq('email', email)
-      .eq('used', false);
+    await prisma.passwordResetToken.updateMany({
+      where: { email, used: false },
+      data: { used: true }
+    });
 
     // Store token
-    await supabaseAdmin.from('password_reset_tokens').insert({
-      email,
-      token: resetToken,
-      expires_at: expiresAt,
+    await prisma.passwordResetToken.create({
+      data: {
+        email,
+        token: resetToken,
+        expires_at: new Date(expiresAt),
+      }
     });
 
     // Send reset email (reusing OTP email template)

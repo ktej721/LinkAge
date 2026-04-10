@@ -40,3 +40,4 @@ certificates
 .env.test.local
 .env.production.local
 .env.local
+/lib/generated/prisma

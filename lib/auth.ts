@@ -1,41 +1,41 @@
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { prisma } from '@/lib/db';
 import { User } from '@/types';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function getSession(): Promise<User | null> {
   const cookieStore = cookies();
   const token = cookieStore.get('linkage_session')?.value;
   if (!token) return null;
 
-  const { data: session } = await supabase
-    .from('user_sessions')
-    .select('*, user:users(*)')
-    .eq('session_token', token)
-    .gt('expires_at', new Date().toISOString())
-    .single();
+  const session = await prisma.userSession.findUnique({
+    where: { session_token: token },
+    include: { user: true },
+  });
 
-  if (!session) return null;
-  return session.user as User;
+  if (!session || session.expires_at < new Date()) {
+    return null;
+  }
+  
+  return session.user as unknown as User;
 }
 
 export async function createSession(userId: string): Promise<string> {
   const token = crypto.randomUUID() + '-' + crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 10 years
+  const expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years
   
-  await supabase.from('user_sessions').insert({
-    user_id: userId,
-    session_token: token,
-    expires_at: expiresAt,
+  await prisma.userSession.create({
+    data: {
+      user_id: userId,
+      session_token: token,
+      expires_at: expiresAt,
+    },
   });
   
   return token;
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  await supabase.from('user_sessions').delete().eq('session_token', token);
+  await prisma.userSession.deleteMany({
+    where: { session_token: token }
+  });
 }

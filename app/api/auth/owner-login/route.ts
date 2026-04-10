@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { sendOTPEmail, generateOTP } from '@/lib/mailer';
 
 export async function POST(req: NextRequest) {
@@ -11,19 +11,32 @@ export async function POST(req: NextRequest) {
   }
 
   // Create owner user if not exists
-  const { data: existing } = await supabaseAdmin.from('users').select('id').eq('email', email).single();
+  const existing = await prisma.user.findFirst({
+    where: { email: email },
+    select: { id: true }
+  });
+  
   if (!existing) {
-    await supabaseAdmin.from('users').insert({
-      email,
-      name: 'Admin',
-      role: 'owner',
-      is_email_verified: true,
+    await prisma.user.create({
+      data: {
+        email,
+        name: 'Admin',
+        role: 'owner',
+        is_email_verified: true,
+      }
     });
   }
 
   const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await supabaseAdmin.from('otp_tokens').insert({ email, otp, purpose: 'login', expires_at: expiresAt });
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await prisma.otpToken.create({
+    data: {
+      email,
+      otp,
+      purpose: 'login',
+      expires_at: expiresAt
+    }
+  });
   await sendOTPEmail(email, otp, 'Admin');
 
   return NextResponse.json({ success: true });

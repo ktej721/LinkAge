@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { awardPoints } from '@/lib/award-points';
 
@@ -21,13 +21,17 @@ export async function POST(
   const requestId = params.id;
 
   // Verify the request belongs to this senior and is still open
-  const { data: request, error: reqErr } = await supabaseAdmin
-    .from('requests')
-    .select('id, senior_id, status, expires_at')
-    .eq('id', requestId)
-    .single();
+  let request;
+  try {
+    request = await prisma.request.findUnique({
+      where: { id: requestId },
+      select: { id: true, senior_id: true, status: true, expires_at: true }
+    });
+  } catch (reqErr) {
+    return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
+  }
 
-  if (reqErr || !request) {
+  if (!request) {
     return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
   }
   if (request.senior_id !== user.id) {
@@ -38,14 +42,17 @@ export async function POST(
   }
 
   // Verify the response belongs to this request — also fetch helper_id for points
-  const { data: response, error: respErr } = await supabaseAdmin
-    .from('responses')
-    .select('id, request_id, helper_id, is_approved')
-    .eq('id', response_id)
-    .eq('request_id', requestId)
-    .single();
+  let response;
+  try {
+    response = await prisma.response.findFirst({
+      where: { id: response_id, request_id: requestId },
+      select: { id: true, request_id: true, helper_id: true, is_approved: true }
+    });
+  } catch (respErr) {
+    return NextResponse.json({ error: 'Response not found for this request.' }, { status: 404 });
+  }
 
-  if (respErr || !response) {
+  if (!response) {
     return NextResponse.json({ error: 'Response not found for this request.' }, { status: 404 });
   }
   if (!response.is_approved) {
@@ -53,29 +60,25 @@ export async function POST(
   }
 
   // Clear any previous accepted_by_senior flags for this request (safety)
-  await supabaseAdmin
-    .from('responses')
-    .update({ accepted_by_senior: false })
-    .eq('request_id', requestId);
+  await prisma.response.updateMany({
+    where: { request_id: requestId },
+    data: { accepted_by_senior: false }
+  });
 
-  // Mark the chosen response as accepted
-  const { error: updateRespErr } = await supabaseAdmin
-    .from('responses')
-    .update({ accepted_by_senior: true })
-    .eq('id', response_id);
+  try {
+    // Mark the chosen response as accepted
+    await prisma.response.update({
+      where: { id: response_id },
+      data: { accepted_by_senior: true }
+    });
 
-  if (updateRespErr) {
-    return NextResponse.json({ error: updateRespErr.message }, { status: 500 });
-  }
-
-  // Close the request
-  const { error: closeErr } = await supabaseAdmin
-    .from('requests')
-    .update({ status: 'closed' })
-    .eq('id', requestId);
-
-  if (closeErr) {
-    return NextResponse.json({ error: closeErr.message }, { status: 500 });
+    // Close the request
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { status: 'closed' }
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 
   // Award 50 points to the helper whose response was accepted

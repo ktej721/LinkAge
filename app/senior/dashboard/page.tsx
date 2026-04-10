@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Mic, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
 
@@ -12,14 +12,14 @@ export default async function SeniorDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  const { data: requests } = await supabaseAdmin
-    .from('requests')
-    .select('*, responses(id, is_approved)')
-    .eq('senior_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(5);
+  const requests = await prisma.request.findMany({
+    where: { senior_id: user.id },
+    include: { responses: { select: { id: true, is_approved: true } } },
+    orderBy: { created_at: 'desc' },
+    take: 5
+  });
 
-  const total = requests?.length || 0;
+  const total = requests.length;
 
   return (
     <div className="space-y-6">
@@ -69,7 +69,7 @@ export default async function SeniorDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {requests?.map(req => {
+            {requests?.map((req: any) => {
               const hasApproved = req.responses?.some((r: any) => r.is_approved);
               const isClosed = req.status === 'closed';
 

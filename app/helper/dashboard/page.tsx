@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,19 +11,16 @@ export default async function HelperDashboard() {
   const user = await getSession();
   if (!user) return null;
 
-  const { data: responses } = await supabaseAdmin
-    .from('responses')
-    .select(`
-      *,
-      request:requests(title)
-    `)
-    .eq('helper_id', user.id)
-    .order('created_at', { ascending: false });
+  const responses = await prisma.response.findMany({
+    where: { helper_id: user.id },
+    include: { request: { select: { title: true } } },
+    orderBy: { created_at: 'desc' }
+  });
 
   const total = responses?.length || 0;
-  const approved = responses?.filter(r => r.is_approved).length || 0;
-  const pending = responses?.filter(r => !r.is_approved && !r.is_rejected).length || 0;
-  const rejected = responses?.filter(r => r.is_rejected).length || 0;
+  const approved = responses?.filter((r: any) => r.is_approved).length || 0;
+  const pending = responses?.filter((r: any) => !r.is_approved && !r.is_rejected).length || 0;
+  const rejected = responses?.filter((r: any) => r.is_rejected).length || 0;
 
   return (
     <div className="space-y-6">
@@ -135,7 +132,7 @@ export default async function HelperDashboard() {
           <div className="glass-panel rounded-3xl overflow-hidden relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-rose-400 rounded-full mix-blend-multiply filter blur-[60px] opacity-10 pointer-events-none"></div>
             <div className="divide-y divide-white/40">
-              {responses?.slice(0, 5).map(resp => (
+              {responses?.slice(0, 5).map((resp: any) => (
                 <div key={resp.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
                   <div>
                     <h4 className="font-semibold text-slate-900 line-clamp-1 text-sm">{resp.request?.title || 'Unknown Request'}</h4>

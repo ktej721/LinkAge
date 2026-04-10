@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+
 import { useRouter } from 'next/navigation';
 import { Phone, PhoneOff, X } from 'lucide-react';
 
@@ -24,56 +24,31 @@ export default function CallNotification({
   useEffect(() => {
     if (!seniorId) return;
 
-    const channel = supabase
-      .channel('incoming-calls')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'responses',
-          filter: `response_type=eq.video_call`,
-        },
-        async (payload) => {
-          const response = payload.new as any;
+    let timer: NodeJS.Timeout;
 
-          // Check if this response is for one of the senior's requests
-          if (requestIds.length > 0 && !requestIds.includes(response.request_id)) return;
-          if (!response.call_url) return;
-
-          try {
-            const { data: helper } = await supabase
-              .from('users')
-              .select('name')
-              .eq('id', response.helper_id)
-              .single();
-
-            const { data: request } = await supabase
-              .from('requests')
-              .select('title')
-              .eq('id', response.request_id)
-              .single();
-
-            setIncomingCall({
-              callUrl: response.call_url,
-              helperName: helper?.name || 'A helper',
-              requestTitle: request?.title || 'your question',
-            });
-          } catch {
-            setIncomingCall({
-              callUrl: response.call_url,
-              helperName: 'A helper',
-              requestTitle: 'your question',
-            });
-          }
+    const checkCalls = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (requestIds.length > 0) {
+          params.append('requestIds', requestIds.join(','));
         }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+        const res = await fetch(`/api/requests/incoming-calls?${params.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.call) {
+          setIncomingCall(prev => prev?.callUrl === data.call.callUrl ? prev : data.call);
+        }
+      } catch (err) {
+        console.error('Failed to poll for incoming calls', err);
+      }
     };
-  }, [requestIds, seniorId]);
+
+    checkCalls();
+    timer = setInterval(checkCalls, 5000); // Check every 5 seconds
+
+    return () => clearInterval(timer);
+  }, [seniorId, requestIds]);
 
   if (!incomingCall) return null;
 

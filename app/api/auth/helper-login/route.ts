@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { createSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -15,14 +15,11 @@ export async function POST(req: NextRequest) {
     const { email, password } = schema.parse(await req.json());
 
     // Find the user
-    const { data: user, error: userErr } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .eq('role', 'helper')
-      .single();
+    const user = await prisma.user.findFirst({
+      where: { email: email, role: 'helper' }
+    });
 
-    if (userErr || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'No helper account found with this email. Please register first.' },
         { status: 404 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { getTierFromPoints, MILESTONE_THRESHOLDS, TIER_CONFIG } from '@/lib/tiers';
 
@@ -17,51 +17,43 @@ export async function GET(
   const helperId = params.id;
 
   // Verify helper exists
-  const { data: helper, error: helperErr } = await supabaseAdmin
-    .from('users')
-    .select('id, name, college_name, college_domain, profile_picture_url')
-    .eq('id', helperId)
-    .eq('role', 'helper')
-    .single();
+  const helper = await prisma.user.findFirst({
+    where: { id: helperId, role: 'helper' },
+    select: { id: true, name: true, college_name: true, college_domain: true, profile_picture_url: true }
+  });
 
-  if (helperErr || !helper) {
+  if (!helper) {
     return NextResponse.json({ error: 'Helper not found.' }, { status: 404 });
   }
 
   // Get total points
-  const { data: pointEvents } = await supabaseAdmin
-    .from('helper_points')
-    .select('*')
-    .eq('helper_id', helperId)
-    .order('created_at', { ascending: false });
+  const pointEvents = await prisma.helperPoint.findMany({
+    where: { helper_id: helperId },
+    orderBy: { created_at: 'desc' }
+  });
 
-  const totalPoints = pointEvents?.reduce((sum, p) => sum + p.points, 0) || 0;
+  const totalPoints = pointEvents?.reduce((sum: any, p: any) => sum + p.points, 0) || 0;
 
   // Get point breakdown by reason
   const breakdown: Record<string, number> = {};
-  pointEvents?.forEach(p => {
+  pointEvents?.forEach((p: any) => {
     breakdown[p.reason] = (breakdown[p.reason] || 0) + p.points;
   });
 
   // Get streak
-  const { data: streak } = await supabaseAdmin
-    .from('helper_streaks')
-    .select('*')
-    .eq('helper_id', helperId)
-    .single();
+  const streak = await prisma.helperStreak.findUnique({
+    where: { helper_id: helperId }
+  });
 
   // Get accepted count
-  const { count: acceptedCount } = await supabaseAdmin
-    .from('responses')
-    .select('id', { count: 'exact', head: true })
-    .eq('helper_id', helperId)
-    .eq('accepted_by_senior', true);
+  const acceptedCount = await prisma.response.count({
+    where: { helper_id: helperId, accepted_by_senior: true }
+  });
 
   // Get total response count
-  const { count: responseCount } = await supabaseAdmin
-    .from('responses')
-    .select('id', { count: 'exact', head: true })
-    .eq('helper_id', helperId);
+  const responseCount = await prisma.response.count({
+    where: { helper_id: helperId }
+  });
 
   // Determine milestones achieved
   const milestonesAchieved = MILESTONE_THRESHOLDS.filter(
