@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
         // Normalize the path — remove any leading slash
         const rawPath = item.video_url;
         const normalizedPath = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath;
-        
+
         console.log(`[admin/review] Generating signed URL for response ${item.id}, video_url: "${rawPath}", normalized: "${normalizedPath}"`);
         // Try the normalized path first
         try {
@@ -48,7 +50,7 @@ export async function GET(req: NextRequest) {
         } catch (err: any) {
           console.error(`[admin/review] Exception signing video for ${item.id}:`, err.message);
         }
-        
+
         // If the first attempt failed, try the raw path as-is
         if (!signed_video && normalizedPath !== rawPath) {
           try {
@@ -57,7 +59,7 @@ export async function GET(req: NextRequest) {
             console.error(`[admin/review] Fallback sign also failed for ${item.id}:`, err.message);
           }
         }
-        
+
         console.log(`[admin/review] Result for ${item.id}: signed_video=${signed_video ? 'OK' : 'NULL'}`);
       }
       return { ...item, signed_video };
