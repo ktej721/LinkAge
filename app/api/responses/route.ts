@@ -53,6 +53,16 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // If this response is auto-approved (text or video_call), mark the request as 'answered'
+  // so it shows up on the senior's dashboard and stops appearing in the helper browse feed.
+  if (is_approved) {
+    await supabaseAdmin
+      .from('requests')
+      .update({ status: 'answered' })
+      .eq('id', request_id)
+      .eq('status', 'open'); // Only transition from 'open' to 'answered', not from 'closed'
+  }
+
   // Award points for submitting a response
   await awardPoints(user.id, 5, 'response_submitted', data.id);
 

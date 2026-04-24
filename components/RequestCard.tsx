@@ -50,9 +50,8 @@ export default function RequestCard({ request, viewAs }: RequestCardProps) {
       <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed">{request.description}</p>
 
       {request.audio_url && (
-        <div className="mb-4 bg-slate-50 rounded-xl p-3 border border-slate-200">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Voice Message</p>
-          <audio controls src={request.audio_url} className="w-full h-10" />
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-500 bg-slate-50 rounded-xl p-3 border border-slate-200">
+          🎤 Voice Message Attached
         </div>
       )}
 
