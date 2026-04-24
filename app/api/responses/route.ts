@@ -18,31 +18,33 @@ export async function POST(req: NextRequest) {
   }
 
   // Check request exists, is open, and not expired
-  const { data: request } = await supabaseAdmin
+  const { data: request, error: reqErr } = await supabaseAdmin
     .from('requests')
     .select('id, status, expires_at')
     .eq('id', request_id)
-    .single();
+    .maybeSingle();
 
-  if (!request || request.status !== 'open') {
+  if (reqErr || !request || request.status !== 'open') {
     return NextResponse.json({ error: 'Request not found or already closed.' }, { status: 404 });
   }
 
   if (request.expires_at && new Date(request.expires_at) < new Date()) {
     // Auto-close expired request
-    await supabaseAdmin.from('requests').update({ status: 'closed' }).eq('id', request_id);
+    await supabaseAdmin
+      .from('requests')
+      .update({ status: 'closed' })
+      .eq('id', request_id);
     return NextResponse.json({ error: 'This request has expired and is no longer accepting answers.' }, { status: 410 });
   }
 
-  // All responses are stored. The senior decides which one to accept.
-  // Video responses still need admin approval before the senior can see them.
+  // Video responses need admin approval; text/video_call are auto-approved
   const is_approved = response_type === 'video' ? false : true;
 
   const { data, error } = await supabaseAdmin.from('responses').insert({
     request_id,
     helper_id: user.id,
-    video_url,
-    text_content,
+    video_url: video_url || null,
+    text_content: text_content || null,
     call_url: call_url || null,
     response_type: response_type || 'text',
     is_kyc_response: false,
@@ -53,14 +55,13 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // If this response is auto-approved (text or video_call), mark the request as 'answered'
-  // so it shows up on the senior's dashboard and stops appearing in the helper browse feed.
+  // If auto-approved (text or video_call), mark the request as 'answered'
   if (is_approved) {
     await supabaseAdmin
       .from('requests')
       .update({ status: 'answered' })
       .eq('id', request_id)
-      .eq('status', 'open'); // Only transition from 'open' to 'answered', not from 'closed'
+      .eq('status', 'open');
   }
 
   // Award points for submitting a response

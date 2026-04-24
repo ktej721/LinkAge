@@ -41,14 +41,14 @@ export async function POST(req: NextRequest) {
         .from('users')
         .select('id')
         .eq('email', data.email)
-        .single();
+        .maybeSingle();
 
       if (!existingUser) {
         await supabaseAdmin.from('users').insert({
           email: data.email,
           name: data.name,
           role: data.role,
-          phone: data.phone,
+          phone: data.phone || null,
           language_preference: data.language_preference || 'english',
           college_domain: collegeDomain,
           college_name: collegeName,
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         .from('users')
         .select('id, role')
         .eq('email', data.email)
-        .single();
+        .maybeSingle();
 
       if (!user) {
         return NextResponse.json({ error: 'No account found with this email. Please register first.' }, { status: 404 });

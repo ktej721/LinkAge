@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const language = searchParams.get('language');
-  const status = searchParams.get('status') || 'open';
 
   let query = supabaseAdmin
     .from('requests')
@@ -20,17 +19,15 @@ export async function GET(req: NextRequest) {
     `)
     .order('created_at', { ascending: false });
 
-  // Seniors see only their own requests
   if (user.role === 'senior') {
     query = query.eq('senior_id', user.id);
   } else if (user.role === 'helper') {
-    // Helpers see open requests; optionally filter by language
     query = query.eq('status', 'open');
     if (language) query = query.eq('language', language);
   }
-  // Owners see everything
 
   const { data, error } = await query;
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
 }
@@ -55,8 +52,8 @@ export async function POST(req: NextRequest) {
     senior_id: user.id,
     title,
     description,
-    audio_url,
-    language: language || user.language_preference,
+    audio_url: audio_url || null,
+    language: language || user.language_preference || 'english',
     category: category || 'general',
     status: 'open',
     expires_at: expiresAt,

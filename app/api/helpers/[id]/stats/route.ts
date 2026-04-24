@@ -17,29 +17,29 @@ export async function GET(
   const helperId = params.id;
 
   // Verify helper exists
-  const { data: helper, error: helperErr } = await supabaseAdmin
+  const { data: helper } = await supabaseAdmin
     .from('users')
     .select('id, name, college_name, college_domain, profile_picture_url')
     .eq('id', helperId)
     .eq('role', 'helper')
-    .single();
+    .maybeSingle();
 
-  if (helperErr || !helper) {
+  if (!helper) {
     return NextResponse.json({ error: 'Helper not found.' }, { status: 404 });
   }
 
-  // Get total points
+  // Get all point events
   const { data: pointEvents } = await supabaseAdmin
     .from('helper_points')
     .select('*')
     .eq('helper_id', helperId)
     .order('created_at', { ascending: false });
 
-  const totalPoints = pointEvents?.reduce((sum, p) => sum + p.points, 0) || 0;
+  const totalPoints = pointEvents?.reduce((sum: any, p: any) => sum + p.points, 0) || 0;
 
   // Get point breakdown by reason
   const breakdown: Record<string, number> = {};
-  pointEvents?.forEach(p => {
+  pointEvents?.forEach((p: any) => {
     breakdown[p.reason] = (breakdown[p.reason] || 0) + p.points;
   });
 
@@ -48,7 +48,7 @@ export async function GET(
     .from('helper_streaks')
     .select('*')
     .eq('helper_id', helperId)
-    .single();
+    .maybeSingle();
 
   // Get accepted count
   const { count: acceptedCount } = await supabaseAdmin

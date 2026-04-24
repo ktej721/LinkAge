@@ -30,7 +30,7 @@ export async function awardPoints(
     .from('helper_streaks')
     .select('*')
     .eq('helper_id', helperId)
-    .single();
+    .maybeSingle();
 
   if (!streak) {
     // First ever activity — create streak record
@@ -49,7 +49,7 @@ export async function awardPoints(
       reference_id: referenceId || null,
     });
   } else {
-    const lastActive = streak.last_active_date;
+    const lastActive = streak.last_active_date || null;
 
     if (lastActive !== today) {
       // Not yet active today
@@ -90,7 +90,6 @@ export async function awardPoints(
 
   // 3. Check milestone thresholds (only for 'accepted_by_senior' events)
   if (reason === 'accepted_by_senior') {
-    // Count total accepted solutions for this helper
     const { count } = await supabaseAdmin
       .from('responses')
       .select('id', { count: 'exact', head: true })
@@ -107,11 +106,9 @@ export async function awardPoints(
           .select('id')
           .eq('helper_id', helperId)
           .eq('reason', milestone.reason)
-          .limit(1)
-          .single();
+          .maybeSingle();
 
         if (!existing) {
-          // Award milestone bonus
           await supabaseAdmin.from('helper_points').insert({
             helper_id: helperId,
             points: milestone.bonus,

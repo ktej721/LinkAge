@@ -15,14 +15,14 @@ export async function POST(req: NextRequest) {
     const { email, password } = schema.parse(await req.json());
 
     // Find the user
-    const { data: user, error: userErr } = await supabaseAdmin
+    const { data: user } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('email', email)
       .eq('role', 'helper')
-      .single();
+      .maybeSingle();
 
-    if (userErr || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'No helper account found with this email. Please register first.' },
         { status: 404 }
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 10 * 365 * 24 * 60 * 60, // 10 years
+      maxAge: 10 * 365 * 24 * 60 * 60,
       path: '/',
     });
 

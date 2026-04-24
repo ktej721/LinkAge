@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { email, token, new_password } = schema.parse(await req.json());
 
     // Find the reset token
-    const { data: resetToken, error: tokenErr } = await supabaseAdmin
+    const { data: resetToken } = await supabaseAdmin
       .from('password_reset_tokens')
       .select('*')
       .eq('email', email)
@@ -23,16 +23,15 @@ export async function POST(req: NextRequest) {
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (tokenErr || !resetToken) {
+    if (!resetToken) {
       return NextResponse.json(
         { error: 'Invalid or expired reset code. Please request a new one.' },
         { status: 400 }
       );
     }
 
-    // Check if expired
     if (new Date(resetToken.expires_at) < new Date()) {
       return NextResponse.json(
         { error: 'Reset code has expired. Please request a new one.' },
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash new password
     const passwordHash = await bcrypt.hash(new_password, 12);
 
     // Update user's password

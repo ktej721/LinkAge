@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { sendOTPEmail, generateOTP } from '@/lib/mailer';
 import { z } from 'zod';
-import crypto from 'crypto';
 
 const schema = z.object({
   email: z.string().email(),
@@ -19,19 +18,17 @@ export async function POST(req: NextRequest) {
       .select('id, name, role')
       .eq('email', email)
       .eq('role', 'helper')
-      .single();
+      .maybeSingle();
 
     if (!user) {
-      // Don't reveal if user exists or not for security — but for hackathon, be helpful
       return NextResponse.json(
         { error: 'No helper account found with this email.' },
         { status: 404 }
       );
     }
 
-    // Generate a reset token (6-digit OTP for simplicity)
     const resetToken = generateOTP();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     // Invalidate previous reset tokens
     await supabaseAdmin
@@ -47,7 +44,7 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt,
     });
 
-    // Send reset email (reusing OTP email template)
+    // Send reset email
     await sendOTPEmail(email, resetToken, user.name);
 
     console.log('[forgot-password] Reset token sent to:', email, 'Token:', resetToken);

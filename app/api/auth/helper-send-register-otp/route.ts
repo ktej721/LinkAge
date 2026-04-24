@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       .from('users')
       .select('id, role, password_hash')
       .eq('email', data.email)
-      .single();
+      .maybeSingle();
 
     if (existingUser && existingUser.password_hash) {
       return NextResponse.json(
@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send email
     await sendOTPEmail(data.email, otp, data.name);
 
     return NextResponse.json({

@@ -20,12 +20,12 @@ export async function POST(
 
   const requestId = params.id;
 
-  // Verify the request belongs to this senior and is still open
+  // Verify the request belongs to this senior and is not closed
   const { data: request, error: reqErr } = await supabaseAdmin
     .from('requests')
     .select('id, senior_id, status, expires_at')
     .eq('id', requestId)
-    .single();
+    .maybeSingle();
 
   if (reqErr || !request) {
     return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
@@ -37,13 +37,13 @@ export async function POST(
     return NextResponse.json({ error: 'Request is already closed.' }, { status: 409 });
   }
 
-  // Verify the response belongs to this request — also fetch helper_id for points
+  // Verify the response belongs to this request
   const { data: response, error: respErr } = await supabaseAdmin
     .from('responses')
     .select('id, request_id, helper_id, is_approved')
     .eq('id', response_id)
     .eq('request_id', requestId)
-    .single();
+    .maybeSingle();
 
   if (respErr || !response) {
     return NextResponse.json({ error: 'Response not found for this request.' }, { status: 404 });
@@ -59,24 +59,20 @@ export async function POST(
     .eq('request_id', requestId);
 
   // Mark the chosen response as accepted
-  const { error: updateRespErr } = await supabaseAdmin
+  const { error: acceptErr } = await supabaseAdmin
     .from('responses')
     .update({ accepted_by_senior: true })
     .eq('id', response_id);
 
-  if (updateRespErr) {
-    return NextResponse.json({ error: updateRespErr.message }, { status: 500 });
+  if (acceptErr) {
+    return NextResponse.json({ error: acceptErr.message }, { status: 500 });
   }
 
   // Close the request
-  const { error: closeErr } = await supabaseAdmin
+  await supabaseAdmin
     .from('requests')
     .update({ status: 'closed' })
     .eq('id', requestId);
-
-  if (closeErr) {
-    return NextResponse.json({ error: closeErr.message }, { status: 500 });
-  }
 
   // Award 50 points to the helper whose response was accepted
   await awardPoints(response.helper_id, 50, 'accepted_by_senior', response_id);

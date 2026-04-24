@@ -21,16 +21,16 @@ export async function POST(req: NextRequest) {
     const data = schema.parse(await req.json());
 
     // 1. Verify OTP first
-    const { data: token, error: tokenError } = await supabaseAdmin
+    const { data: token } = await supabaseAdmin
       .from('otp_tokens')
       .select('*')
       .eq('email', data.email)
       .eq('used', false)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (tokenError || !token) {
+    if (!token) {
       return NextResponse.json(
         { error: 'No active verification code found. Please request a new one.' },
         { status: 400 }
@@ -67,17 +67,16 @@ export async function POST(req: NextRequest) {
     const collegeName = getCollegeName(data.email);
     const collegeDomain = data.email.split('@')[1];
 
-    // 4. Check if user already exists (from old OTP registration)
+    // 4. Check if user already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id, role, password_hash')
       .eq('email', data.email)
-      .single();
+      .maybeSingle();
 
     let userId: string;
 
     if (existingUser) {
-      // Update existing helper with password
       if (existingUser.role !== 'helper') {
         return NextResponse.json(
           { error: 'This email is registered with a different role.' },
@@ -104,7 +103,6 @@ export async function POST(req: NextRequest) {
 
       userId = existingUser.id;
     } else {
-      // Create new user
       const { data: newUser, error: insertErr } = await supabaseAdmin
         .from('users')
         .insert({
@@ -118,7 +116,7 @@ export async function POST(req: NextRequest) {
           is_email_verified: true,
           password_hash: passwordHash,
         })
-        .select()
+        .select('id')
         .single();
 
       if (insertErr) {
@@ -130,8 +128,6 @@ export async function POST(req: NextRequest) {
       }
 
       userId = newUser.id;
-
-      // Send welcome email (fire-and-forget)
       sendWelcomeEmail(data.email, data.name, 'helper').catch(console.error);
     }
 
@@ -148,7 +144,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 10 * 365 * 24 * 60 * 60, // 10 years
+      maxAge: 10 * 365 * 24 * 60 * 60,
       path: '/',
     });
 
